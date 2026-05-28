@@ -184,20 +184,39 @@ input, textarea { font: inherit; }
   background: var(--accent);
 }
 
-/* ── Home view (combined timer + list) ───────────────────────────────────── */
-.home-view { display: flex; flex-direction: column; }
+/* ── Split-scroll home layout ────────────────────────────────────────────── */
+/* When on the home tab, view-content becomes a flex column that doesn't     */
+/* scroll — the pie section stays fixed and task-list-section scrolls alone. */
+.view-content.view-home {
+  overflow: hidden;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+.home-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .pie-section {
-  position: sticky;
-  top: var(--header-h);
-  z-index: 50;
+  flex-shrink: 0;
   background: var(--bg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 16px 14px;
+  padding: 8px 16px 12px;
   border-bottom: 1px solid var(--border);
 }
-.task-list-section { padding: 12px 12px 0; }
+.task-list-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-2);
+  padding: 12px 12px;
+  padding-bottom: calc(var(--tab-h) + var(--safe-b) + 80px);
+}
 
 /* ── Task list view (legacy, kept for compatibility) ─────────────────────── */
 .task-list-view { padding: 12px 12px 0; }
@@ -227,43 +246,39 @@ input, textarea { font: inherit; }
 .task-item {
   background: var(--bg);
   border-radius: var(--r-lg);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 8px rgba(0,0,0,0.04);
   border: 1px solid var(--border);
-  transition: box-shadow var(--trans), opacity var(--trans);
-  cursor: default;
+  transition: box-shadow var(--trans);
   user-select: none;
 }
 .task-item.drag-over { box-shadow: 0 0 0 2px var(--accent); }
-.task-item.is-dragging { opacity: 0.5; }
-.task-item.completed-task { opacity: 0.55; box-shadow: none; }
-.task-item.active-task { box-shadow: 0 0 0 2px var(--accent), var(--shadow-md); }
+.task-item.completed-task { opacity: 0.5; box-shadow: none; }
+.task-item.active-task { box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(83,74,183,0.15); }
 
 .task-main-row {
   display: flex;
   align-items: center;
-  padding: 14px 14px 14px 18px;
+  padding: 14px 12px 10px 18px;
   gap: 12px;
   position: relative;
   cursor: pointer;
 }
 .task-color-bar {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 0; top: 0; bottom: 0;
   width: 4px;
   border-radius: 4px 0 0 4px;
 }
 .task-emoji-tile {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 .task-title-wrap { flex: 1; min-width: 0; }
@@ -280,21 +295,13 @@ input, textarea { font: inherit; }
   color: var(--text-3);
   font-weight: 400;
 }
-.task-duration-badge {
-  font-size: 13px;
-  color: var(--text-3);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-.task-duration-badge.overtime { color: var(--overtime); }
 .task-chevron {
   color: var(--text-3);
-  transition: transform var(--trans);
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.45;
+  cursor: pointer;
+  padding: 4px;
 }
-.task-chevron.open { transform: rotate(90deg); }
 .task-drag-handle {
   color: var(--text-3);
   font-size: 16px;
@@ -302,86 +309,56 @@ input, textarea { font: inherit; }
   flex-shrink: 0;
   cursor: grab;
   touch-action: none;
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
-/* Expanded row */
-.task-expanded-row {
-  padding: 0 14px 14px 22px;
+/* Always-visible action row */
+.task-action-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-top: 2px;
+  gap: 0;
+  padding: 6px 14px 12px 22px;
 }
-.task-time-pill {
+.task-action-time {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-2);
-  font-variant-numeric: tabular-nums;
-  min-width: 44px;
-}
-.task-time-pill.overtime { color: var(--overtime); }
-.task-action-group {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  justify-content: center;
-}
-.task-action-btn {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-2);
-  padding: 5px 10px;
-  border-radius: var(--r-sm);
-  transition: background var(--trans), color var(--trans), transform 0.1s;
-}
-.task-action-btn:active { transform: scale(0.93); background: var(--bg-2); }
-.task-action-btn.danger { color: var(--danger); }
-.task-action-btn.accent { color: var(--accent); font-weight: 600; }
-.task-action-sep {
-  width: 1px;
-  height: 12px;
-  background: var(--border);
-  flex-shrink: 0;
-}
-.task-elapsed-label {
-  font-size: 12px;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
-  min-width: 40px;
-  text-align: right;
+  min-width: 46px;
+  margin-right: 4px;
 }
-
-.task-play-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.12s, background var(--trans);
-  box-shadow: var(--shadow-sm);
+.task-action-time.overtime { color: var(--overtime); }
+.task-action-btn {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background var(--trans), color var(--trans);
+  white-space: nowrap;
 }
-.task-play-btn:active { transform: scale(0.88); }
-.task-play-btn.paused-btn { background: var(--text-3); }
-.task-play-btn svg { width: 14px; height: 14px; }
+.task-action-btn:active { background: var(--bg-2); }
+.task-action-btn.danger { color: var(--danger); opacity: 0.8; }
+.task-action-btn.accent { color: var(--accent); font-weight: 500; }
+.task-action-elapsed {
+  font-size: 13px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  opacity: 0.7;
+}
 
 .random-pick-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 18px;
+  padding: 9px 18px;
   border-radius: var(--r-full);
-  background: var(--bg-2);
+  background: transparent;
   color: var(--text-3);
   font-size: 13px;
-  font-weight: 500;
-  margin: 4px auto 12px;
+  font-weight: 400;
+  margin: 4px auto 8px;
   width: fit-content;
   border: 1px solid var(--border);
 }
@@ -463,6 +440,13 @@ input, textarea { font: inherit; }
 .no-active-task-msg .no-task-icon { font-size: 36px; margin-bottom: 6px; }
 .no-active-task-msg p { font-size: 13px; color: var(--text-3); }
 
+.pie-with-adj {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
 .pie-wrap {
   position: relative;
   width: 260px;
@@ -490,31 +474,26 @@ input, textarea { font: inherit; }
 .pie-center-btn:active { transform: translate(-50%,-50%) scale(0.88); }
 .pie-center-btn svg { width: 30px; height: 30px; }
 
-.pie-adjust-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 8px;
-}
 .pie-adj-btn {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--bg-2);
-  color: var(--text);
-  font-size: 15px;
+  color: var(--text-2);
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: transform 0.12s, background var(--trans);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 .pie-adj-btn:active { transform: scale(0.88); background: var(--border); }
 
 .pie-time-display {
   text-align: center;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .pie-time-big {
   font-size: 22px;
@@ -527,29 +506,25 @@ input, textarea { font: inherit; }
 
 .pie-action-pills {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   margin-top: 10px;
   width: 100%;
   justify-content: center;
 }
 .pie-action-pill {
   flex: 1;
-  max-width: 140px;
-  padding: 9px 12px;
+  max-width: 150px;
+  padding: 9px 14px;
   border-radius: var(--r-full);
   background: var(--bg-2);
   font-size: 13px;
   font-weight: 500;
   color: var(--text-2);
   text-align: center;
+  border: 1px solid var(--border);
   transition: background var(--trans), transform 0.1s;
 }
-.pie-action-pill:active { transform: scale(0.95); background: var(--border); }
-.pie-action-pill.complete-pill {
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-}
+.pie-action-pill:active { transform: scale(0.95); background: var(--bg-3); }
 
 .pie-upcoming {
   width: 100%;

@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { TASK_COLORS } from '../utils/taskUtils'
 import { formatMMSS } from '../utils/timeUtils'
 import TaskItem from './TaskItem'
-import EmojiColorPicker from './EmojiColorPicker'
 
-const CX = 130, CY = 130, R = 110, TICK_OUTER = 118, TICK_MED = 112, TICK_INNER = 108
+// ── SVG constants — slightly larger viewBox so clock numbers fit ──────────
+const CX = 140, CY = 140, R = 110
+const TICK_OUTER = 118, TICK_MED = 112, TICK_INNER = 107
 
 function polar(angleDeg, r = R) {
   const rad = (angleDeg - 90) * Math.PI / 180
@@ -20,18 +21,44 @@ function pieSlicePath(fractionOfHour) {
   return `M ${CX} ${CY} L ${CX} ${CY - R} A ${R} ${R} 0 ${large} 1 ${end.x} ${end.y} Z`
 }
 
-function minuteMarkers() {
-  return Array.from({ length: 60 }, (_, i) => {
+function ClockFace({ fractionOfHour, fillColor, isOvertime }) {
+  const ticks = Array.from({ length: 60 }, (_, i) => {
     const is5 = i % 5 === 0
     const p1 = polar(i * 6, TICK_OUTER)
     const p2 = polar(i * 6, is5 ? TICK_INNER : TICK_MED)
     return (
       <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-        stroke={is5 ? '#C8C8D8' : '#E0E0EC'}
-        strokeWidth={is5 ? 2 : 1} strokeLinecap="round"
+        stroke={is5 ? '#C0C0D0' : '#E0E0EC'}
+        strokeWidth={is5 ? 1.5 : 1} strokeLinecap="round"
       />
     )
   })
+
+  const numbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((n, i) => {
+    const pos = polar(i * 30, 128)
+    return (
+      <text key={n} x={pos.x} y={pos.y}
+        textAnchor="middle" dominantBaseline="middle"
+        fontSize="9" fill="#ADADC0" fontFamily="system-ui,sans-serif" fontWeight="500"
+      >{n}</text>
+    )
+  })
+
+  return (
+    <svg className="pie-svg" viewBox="0 0 280 280">
+      <circle cx={CX} cy={CY} r={R} fill="#F5F6FA" />
+      {ticks}
+      {numbers}
+      {fractionOfHour > 0 && (
+        <path
+          d={pieSlicePath(fractionOfHour)}
+          fill={isOvertime ? '#FF4757' : fillColor}
+          opacity={isOvertime ? 0.85 : 0.9}
+        />
+      )}
+      <circle cx={CX} cy={CY} r={40} fill="white" />
+    </svg>
+  )
 }
 
 export default function HomeView({
@@ -39,9 +66,8 @@ export default function HomeView({
   timerState, elapsed, activeTask,
   startTask, toggleTimer, adjustTime, completeTask,
   deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
-  autoEmoji, autoColor,
+  autoEmoji, autoColor, resetTask,
 }) {
-  const [showPicker, setShowPicker] = useState(false)
   const [dragOverId, setDragOverId] = useState(null)
   const draggedId = useRef(null)
   const touchDragRef = useRef(null)
@@ -52,32 +78,26 @@ export default function HomeView({
   const fractionOfHour = activeTask ? Math.max(0, Math.min(remainSec, 3600)) / 3600 : 0
   const color = activeTask ? (TASK_COLORS[activeTask.color] ?? TASK_COLORS.purple) : TASK_COLORS.purple
 
-  function onDragStart(e, taskId) { draggedId.current = taskId; e.dataTransfer.effectAllowed = 'move' }
-  function onDragOver(e, taskId) { e.preventDefault(); if (taskId !== draggedId.current) setDragOverId(taskId) }
-  function onDrop(taskId) {
-    const fromId = draggedId.current
-    if (!fromId || fromId === taskId) { cleanup(); return }
+  // Drag handlers
+  function onDragStart(e, id) { draggedId.current = id; e.dataTransfer.effectAllowed = 'move' }
+  function onDragOver(e, id) { e.preventDefault(); if (id !== draggedId.current) setDragOverId(id) }
+  function onDrop(id) {
+    const from = draggedId.current
+    if (!from || from === id) { cleanup(); return }
     const list = [...incompleteTasks]
-    const fi = list.findIndex(t => t.id === fromId)
-    const ti = list.findIndex(t => t.id === taskId)
-    if (fi >= 0 && ti >= 0) {
-      const [item] = list.splice(fi, 1)
-      list.splice(ti, 0, item)
-      reorderTasks([...list, ...completedTasks])
-    }
+    const fi = list.findIndex(t => t.id === from)
+    const ti = list.findIndex(t => t.id === id)
+    if (fi >= 0 && ti >= 0) { const [item] = list.splice(fi, 1); list.splice(ti, 0, item); reorderTasks([...list, ...completedTasks]) }
     cleanup()
   }
   function onDragEnd() { cleanup() }
   function cleanup() { draggedId.current = null; setDragOverId(null) }
-  function onTouchStart(e, taskId) { e.preventDefault(); touchDragRef.current = { taskId, lastOverId: null } }
+  function onTouchStart(e, id) { e.preventDefault(); touchDragRef.current = { taskId: id, lastOverId: null } }
   function onTouchMove(e) {
     if (!touchDragRef.current) return
-    const touch = e.changedTouches[0]
-    const overId = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-task-id]')?.dataset?.taskId ?? null
-    if (overId && overId !== touchDragRef.current.taskId) {
-      touchDragRef.current.lastOverId = overId
-      setDragOverId(overId)
-    }
+    const t = e.changedTouches[0]
+    const overId = document.elementFromPoint(t.clientX, t.clientY)?.closest('[data-task-id]')?.dataset?.taskId ?? null
+    if (overId && overId !== touchDragRef.current.taskId) { touchDragRef.current.lastOverId = overId; setDragOverId(overId) }
   }
   function onTouchEnd() {
     if (!touchDragRef.current) return
@@ -86,82 +106,59 @@ export default function HomeView({
       const list = [...incompleteTasks]
       const fi = list.findIndex(t => t.id === taskId)
       const ti = list.findIndex(t => t.id === lastOverId)
-      if (fi >= 0 && ti >= 0) {
-        const [item] = list.splice(fi, 1)
-        list.splice(ti, 0, item)
-        reorderTasks([...list, ...completedTasks])
-      }
+      if (fi >= 0 && ti >= 0) { const [item] = list.splice(fi, 1); list.splice(ti, 0, item); reorderTasks([...list, ...completedTasks]) }
     }
-    touchDragRef.current = null
-    setDragOverId(null)
+    touchDragRef.current = null; setDragOverId(null)
   }
-  const dragHandlers = { onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd }
+  const drag = { onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd }
 
   return (
     <div className="home-view">
-      {/* ── Sticky pie section ── */}
+
+      {/* ── Fixed pie header ─────────────────────────────────── */}
       <div className="pie-section">
         {!activeTask ? (
           <div className="no-active-task-msg">
-            <div className="no-task-icon">⏱️</div>
+            <span className="no-task-icon">⏱️</span>
             <p>Tap a task to start</p>
           </div>
         ) : (
           <>
-            <div className="pie-wrap">
-              <svg className="pie-svg" viewBox="0 0 260 260">
-                <circle cx={CX} cy={CY} r={R} fill="#F5F6FA" />
-                {minuteMarkers()}
-                {fractionOfHour > 0 && (
-                  <path
-                    d={pieSlicePath(fractionOfHour)}
-                    fill={isOvertime ? '#FF4757' : color.bg}
-                    opacity={isOvertime ? 0.85 : 0.9}
-                  />
-                )}
-                <circle cx={CX} cy={CY} r={42} fill="white" />
-              </svg>
-              <button className="pie-center-btn" onClick={toggleTimer} aria-label={timerState.isRunning ? 'Pause' : 'Play'}>
-                {timerState.isRunning
-                  ? <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                  : <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="6,3 21,12 6,21"/></svg>
-                }
-              </button>
+            <div className="pie-with-adj">
+              <button className="pie-adj-btn" onClick={() => adjustTime(5 * 60)}>−5</button>
+              <div className="pie-wrap">
+                <ClockFace
+                  fractionOfHour={fractionOfHour}
+                  fillColor={color.bg}
+                  isOvertime={isOvertime}
+                />
+                <button className="pie-center-btn" onClick={toggleTimer}
+                  aria-label={timerState.isRunning ? 'Pause' : 'Play'}
+                >
+                  {timerState.isRunning
+                    ? <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    : <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><polygon points="7,3 21,12 7,21"/></svg>
+                  }
+                </button>
+              </div>
+              <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)}>+5</button>
             </div>
 
             <div className="pie-time-display">
-              <div className={`pie-time-big${isOvertime ? ' overtime' : ''}`}>
+              <span className={`pie-time-big${isOvertime ? ' overtime' : ''}`}>
                 {isOvertime ? '+' : ''}{formatMMSS(Math.abs(remainSec))}
-              </div>
-            </div>
-
-            <div className="pie-adjust-row">
-              <button className="pie-adj-btn" onClick={() => adjustTime(5 * 60)}>−5</button>
-              <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)}>+5</button>
+              </span>
             </div>
           </>
         )}
 
-        {/* Action pills — always visible */}
         <div className="pie-action-pills">
-          <button className="pie-action-pill" onClick={autoEmoji}>
-            😊 Emoji Me!
-          </button>
-          <button className="pie-action-pill" onClick={autoColor}>
-            🌈 Color Me!
-          </button>
-          {activeTask && (
-            <button
-              className="pie-action-pill complete-pill"
-              onClick={() => completeTask(activeTask.id)}
-            >
-              ✓ Done
-            </button>
-          )}
+          <button className="pie-action-pill" onClick={autoEmoji}>😊 Emoji Me!</button>
+          <button className="pie-action-pill" onClick={autoColor}>🌈 Color Me!</button>
         </div>
       </div>
 
-      {/* ── Scrollable task list ── */}
+      {/* ── Scrollable task list ─────────────────────────────── */}
       <div className="task-list-section">
         {tasks.length === 0 && (
           <div className="task-list-empty">
@@ -185,7 +182,8 @@ export default function HomeView({
             onDelete={deleteTask}
             onMoveTop={moveToTop}
             onUpdate={updateTask}
-            {...dragHandlers}
+            onReset={resetTask}
+            {...drag}
           />
         ))}
 
@@ -199,15 +197,10 @@ export default function HomeView({
           <>
             <div className="tasks-section-label">Completed · {completedTasks.length}</div>
             {completedTasks.map(task => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                isActive={false}
-                elapsed={0}
-                timerState={timerState}
-                isDragOver={false}
+              <TaskItem key={task.id} task={task} isActive={false} elapsed={0}
+                timerState={timerState} isDragOver={false}
                 onStart={() => {}} onToggleTimer={() => {}} onComplete={() => {}}
-                onDelete={deleteTask} onMoveTop={moveToTop} onUpdate={updateTask}
+                onDelete={deleteTask} onMoveTop={moveToTop} onUpdate={updateTask} onReset={() => {}}
                 onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}}
                 onDragEnd={() => {}} onTouchStart={() => {}} onTouchMove={() => {}} onTouchEnd={() => {}}
               />
@@ -215,14 +208,6 @@ export default function HomeView({
           </>
         )}
       </div>
-
-      {showPicker && activeTask && (
-        <EmojiColorPicker
-          task={activeTask}
-          onUpdate={updates => updateTask(activeTask.id, updates)}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
     </div>
   )
 }

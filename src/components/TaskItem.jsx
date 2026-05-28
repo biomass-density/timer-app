@@ -4,26 +4,10 @@ import { formatMMSS, formatDuration } from '../utils/timeUtils'
 import EmojiColorPicker from './EmojiColorPicker'
 
 export default function TaskItem({
-  task,
-  isActive,
-  elapsed,
-  timerState,
-  isDragOver,
-  onStart,
-  onToggleTimer,
-  onComplete,
-  onDelete,
-  onMoveTop,
-  onUpdate,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
+  task, isActive, elapsed, timerState, isDragOver,
+  onStart, onToggleTimer, onComplete, onDelete, onMoveTop, onUpdate, onReset,
+  onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
 }) {
-  const [expanded, setExpanded] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
 
   const color = TASK_COLORS[task.color] ?? TASK_COLORS.purple
@@ -31,10 +15,12 @@ export default function TaskItem({
   const displaySec = isActive ? plannedSec - elapsed : plannedSec
   const isOvertime = isActive && displaySec < 0
   const timeLabel = isActive ? formatMMSS(Math.abs(displaySec)) : formatDuration(plannedSec)
-  const elapsedLabel = isActive ? formatDuration(elapsed) : formatDuration(task.actualSeconds ?? 0)
+  const elapsedLabel = isActive ? formatDuration(Math.max(0, elapsed)) : (task.actualSeconds ? formatDuration(task.actualSeconds) : '0:00')
 
-  function handleRowClick() {
-    if (!task.completed) setExpanded(e => !e)
+  function handleCardTap() {
+    if (task.completed) return
+    if (isActive) onToggleTimer()
+    else onStart(task.id)
   }
 
   return (
@@ -48,13 +34,13 @@ export default function TaskItem({
         onDrop={() => onDrop(task.id)}
         onDragEnd={onDragEnd}
       >
-        {/* Main row */}
-        <div className="task-main-row" onClick={handleRowClick}>
+        {/* ── Main row ── */}
+        <div className="task-main-row" onClick={handleCardTap}>
           <div className="task-color-bar" style={{ background: color.bg }} />
 
           <div
             className="task-emoji-tile"
-            style={{ background: `${color.bg}22` }}
+            style={{ background: `${color.bg}28` }}
             onClick={e => { e.stopPropagation(); if (!task.completed) setShowPicker(true) }}
           >
             {task.emoji}
@@ -67,28 +53,11 @@ export default function TaskItem({
           </div>
 
           {!task.completed && (
-            <span className={`task-duration-badge${isOvertime ? ' overtime' : ''}`}>
-              {isOvertime ? '+' : ''}{timeLabel}
-            </span>
-          )}
-
-          {isActive && !task.completed && (
-            <button
-              className={`task-play-btn${!timerState.isRunning ? ' paused-btn' : ''}`}
-              onClick={e => { e.stopPropagation(); onToggleTimer() }}
-              aria-label={timerState.isRunning ? 'Pause' : 'Resume'}
-            >
-              {timerState.isRunning
-                ? <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                : <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-              }
-            </button>
-          )}
-
-          {!task.completed && (
-            <svg className={`task-chevron${expanded ? ' open' : ''}`}
+            <svg
+              className="task-chevron"
               width="16" height="16" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2.5"
+              fill="none" stroke="currentColor" strokeWidth="2"
+              onClick={e => { e.stopPropagation(); setShowPicker(true) }}
             >
               <polyline points="9,18 15,12 9,6"/>
             </svg>
@@ -101,36 +70,29 @@ export default function TaskItem({
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
               onClick={e => e.stopPropagation()}
-              aria-label="Drag to reorder"
             >⠿</span>
           )}
         </div>
 
-        {/* Expanded action row */}
-        {expanded && !task.completed && (
-          <div className="task-expanded-row">
-            <span className={`task-time-pill${isOvertime ? ' overtime' : ''}`}>
+        {/* ── Action row — always visible for incomplete tasks ── */}
+        {!task.completed && (
+          <div className="task-action-row">
+            <span className={`task-action-time${isOvertime ? ' overtime' : ''}`}>
               {isOvertime ? '+' : ''}{timeLabel}
             </span>
-            <div className="task-action-group">
-              <button className="task-action-btn danger" onClick={() => onDelete(task.id)}>
-                Delete
-              </button>
-              <span className="task-action-sep" />
-              <button className="task-action-btn" onClick={() => { onMoveTop(task.id); setExpanded(false) }}>
-                Top
-              </button>
-              <span className="task-action-sep" />
-              {!isActive
-                ? <button className="task-action-btn accent" onClick={() => { onStart(task.id); setExpanded(false) }}>
-                    Start
-                  </button>
-                : <button className="task-action-btn accent" onClick={() => { onComplete(task.id); setExpanded(false) }}>
-                    Complete
-                  </button>
-              }
-            </div>
-            <span className="task-elapsed-label">{elapsedLabel}</span>
+            <button
+              className="task-action-btn danger"
+              onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+            >Delete</button>
+            <button
+              className="task-action-btn"
+              onClick={e => { e.stopPropagation(); isActive ? onReset(task.id) : onMoveTop(task.id) }}
+            >{isActive ? 'Reset' : 'Top'}</button>
+            <button
+              className="task-action-btn accent"
+              onClick={e => { e.stopPropagation(); onComplete(task.id) }}
+            >Complete</button>
+            <span className="task-action-elapsed">{elapsedLabel}</span>
           </div>
         )}
       </div>

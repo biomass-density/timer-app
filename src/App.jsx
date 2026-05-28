@@ -265,6 +265,17 @@ export default function App() {
 
   const deletePreset = useCallback((id) => setPresets(prev => prev.filter(p => p.id !== id)), [setPresets])
 
+  // ── Reset task timer ─────────────────────────────────────────────────────
+  const resetTask = useCallback((taskId) => {
+    if (timerState.activeTaskId === taskId) {
+      setTimerState(prev => ({
+        ...prev,
+        accumulatedSeconds: 0,
+        startTimestamp: prev.isRunning ? Date.now() : null,
+      }))
+    }
+  }, [timerState.activeTaskId, setTimerState])
+
   // ── Auto emoji / color ───────────────────────────────────────────────────
   const autoEmoji = useCallback(() => {
     setTasks(prev => prev.map(t => ({ ...t, emoji: getAutoEmoji(t.title) })))
@@ -309,7 +320,7 @@ export default function App() {
     sessions,
     addTask, startTask, pauseTimer, resumeTimer, toggleTimer, adjustTime,
     completeTask, deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
-    autoEmoji, autoColor,
+    autoEmoji, autoColor, resetTask,
     totalRemainingSeconds, endTime, totalListMinutes, flashOvertime,
   }
 
@@ -323,7 +334,7 @@ export default function App() {
           hasActiveTasks={incompleteTasks.length > 0}
         />
 
-        <main className="view-content">
+        <main className={`view-content${activeTab === 'home' ? ' view-home' : ''}`}>
           {activeTab === 'home'     && <HomeView {...shared} />}
           {activeTab === 'settings' && <SettingsView {...shared} />}
         </main>
