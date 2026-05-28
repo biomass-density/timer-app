@@ -58,23 +58,32 @@ const EMOJI_RULES = [
   { keys: ['email', 'inbox', 'reply', 'message', 'mail'], emoji: '📧' },
   { keys: ['meeting', 'standup', 'sync', 'retro', 'sprint'], emoji: '📅' },
   { keys: ['call', 'zoom', 'phone', 'ring', 'video'], emoji: '📞' },
-  { keys: ['lunch', 'dinner', 'breakfast', 'eat', 'food', 'meal', 'snack', 'coffee', 'tea'], emoji: '🍽️' },
-  { keys: ['run', 'running', 'jog', 'exercise', 'gym', 'workout', 'walk', 'yoga', 'stretch', 'hike'], emoji: '🏃' },
-  { keys: ['write', 'writing', 'blog', 'report', 'essay', 'draft', 'article', 'newsletter'], emoji: '✍️' },
-  { keys: ['code', 'coding', 'dev', 'develop', 'debug', 'build', 'deploy', 'script'], emoji: '💻' },
+  // cooking/food — must come before generic "meal" words
+  { keys: ['cook', 'bake', 'recipe', 'chef', 'grill', 'roast', 'fry', 'boil', 'prep meal', 'prep dinner', 'prep lunch'], emoji: '🍳' },
+  { keys: ['lunch', 'dinner', 'breakfast', 'eat', 'food', 'meal', 'snack', 'coffee', 'tea', 'groceries'], emoji: '🍽️' },
+  // gardening/plants — checked BEFORE 'planning' so "water plants" / "plant seeds" match here
+  { keys: ['water plant', 'garden', 'plant', 'flower', 'weed', 'pot soil', 'compost', 'prune', 'trim tree', 'water the'], emoji: '🪴' },
+  { keys: ['run', 'running', 'jog', 'exercise', 'gym', 'workout', 'yoga', 'stretch', 'hike', 'swim', 'bike', 'cycling'], emoji: '🏃' },
+  { keys: ['walk', 'stroll'], emoji: '🚶' },
+  { keys: ['write', 'writing', 'blog', 'report', 'essay', 'draft', 'article', 'newsletter', 'journal'], emoji: '✍️' },
+  { keys: ['code', 'coding', 'dev', 'develop', 'debug', 'build', 'deploy', 'script', 'programming'], emoji: '💻' },
   { keys: ['read', 'reading', 'book', 'study', 'studying', 'learn', 'research', 'docs'], emoji: '📚' },
-  { keys: ['review', 'pr', 'feedback', 'check', 'qa', 'test', 'audit'], emoji: '🔍' },
-  { keys: ['design', 'figma', 'ui', 'ux', 'sketch', 'mockup', 'prototype', 'wireframe'], emoji: '🎨' },
-  { keys: ['plan', 'planning', 'strategy', 'goals', 'roadmap', 'agenda'], emoji: '🗺️' },
-  { keys: ['music', 'guitar', 'piano', 'sing', 'practice', 'instrument', 'record'], emoji: '🎵' },
-  { keys: ['shop', 'shopping', 'groceries', 'buy', 'order', 'purchase'], emoji: '🛒' },
-  { keys: ['clean', 'cleaning', 'laundry', 'dishes', 'vacuum', 'tidy', 'organise', 'organize'], emoji: '🧹' },
-  { keys: ['social', 'twitter', 'instagram', 'linkedin', 'post', 'content', 'media'], emoji: '📱' },
-  { keys: ['data', 'analyse', 'analyze', 'analytics', 'metrics', 'stats', 'report'], emoji: '📊' },
-  { keys: ['break', 'relax', 'rest', 'pause', 'chill', 'nap', 'walk'], emoji: '☕' },
+  { keys: ['review', 'pr ', 'feedback', 'qa ', 'test', 'audit'], emoji: '🔍' },
+  { keys: ['design', 'figma', 'ui ', 'ux ', 'sketch', 'mockup', 'prototype', 'wireframe'], emoji: '🎨' },
+  // planning — 'plan' checked with a word boundary so "plant" won't match
+  { keys: ['planning', 'strategy', 'goals', 'roadmap', 'agenda', 'plan '], emoji: '🗺️' },
+  { keys: ['music', 'guitar', 'piano', 'sing', 'instrument', 'record', 'podcast'], emoji: '🎵' },
+  { keys: ['shop', 'shopping', 'buy ', 'order', 'purchase'], emoji: '🛒' },
+  { keys: ['clean', 'cleaning', 'laundry', 'dishes', 'vacuum', 'tidy', 'organise', 'organize', 'declutter'], emoji: '🧹' },
+  { keys: ['social', 'twitter', 'instagram', 'linkedin', 'post', 'content'], emoji: '📱' },
+  { keys: ['data', 'analyse', 'analyze', 'analytics', 'metrics', 'stats'], emoji: '📊' },
+  { keys: ['break', 'relax', 'rest', 'chill', 'nap', 'meditat'], emoji: '☕' },
   { keys: ['finance', 'budget', 'invoice', 'payment', 'accounting', 'tax', 'billing'], emoji: '💰' },
   { keys: ['present', 'presentation', 'slides', 'pitch', 'demo', 'talk'], emoji: '🎤' },
   { keys: ['travel', 'flight', 'pack', 'trip', 'commute'], emoji: '✈️' },
+  { keys: ['call', 'doctor', 'dentist', 'appointment', 'hospital'], emoji: '🏥' },
+  { keys: ['pet', 'dog', 'cat', 'feed the', 'walk the dog'], emoji: '🐾' },
+  { keys: ['paint', 'draw', 'art', 'sketch', 'illustrat'], emoji: '🎨' },
 ]
 
 export function getAutoEmoji(title) {
@@ -82,6 +91,8 @@ export function getAutoEmoji(title) {
   for (const rule of EMOJI_RULES) {
     if (rule.keys.some(k => lower.includes(k))) return rule.emoji
   }
+  // Fallback: check if the title starts with a specific common verb
+  if (/^(plan\b)/.test(lower)) return '🗺️'
   return '✨'
 }
 

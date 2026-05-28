@@ -5,7 +5,7 @@ import EmojiColorPicker from './EmojiColorPicker'
 
 export default function TaskItem({
   task, isActive, elapsed, timerState, isDragOver,
-  onStart, onToggleTimer, onComplete, onDelete, onMoveTop, onUpdate, onReset,
+  onSelect, onToggleTimer, onComplete, onDelete, onMoveTop, onUpdate, onReset,
   onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
 }) {
   const [showPicker, setShowPicker] = useState(false)
@@ -21,8 +21,8 @@ export default function TaskItem({
 
   function handleCardTap() {
     if (task.completed) return
-    if (isActive) onToggleTimer()
-    else onStart(task.id)
+    if (isActive) onToggleTimer()   // tap active card to pause/resume
+    else onSelect(task.id)          // tap other card to preload it
   }
 
   // CSS custom properties drive all colors inside the card
@@ -47,9 +47,6 @@ export default function TaskItem({
       >
         {/* ── Main row ── */}
         <div className="task-main-row" onClick={handleCardTap}>
-          {/* Subtle dark left bar on the colored card */}
-          <div className="task-color-bar" />
-
           <div
             className="task-emoji-tile"
             onClick={e => { e.stopPropagation(); if (!task.completed) setShowPicker(true) }}
@@ -62,17 +59,6 @@ export default function TaskItem({
               {task.title}
             </div>
           </div>
-
-          {!task.completed && (
-            <svg
-              className="task-chevron"
-              width="16" height="16" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2"
-              onClick={e => { e.stopPropagation(); setShowPicker(true) }}
-            >
-              <polyline points="9,18 15,12 9,6"/>
-            </svg>
-          )}
 
           {!task.completed && (
             <span

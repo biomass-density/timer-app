@@ -33,7 +33,9 @@ export default function App() {
 
   const [tasks, setTasks] = useLocalStorage(`ft_tasks_${today}`, [])
   const [timerState, setTimerState] = useLocalStorage('ft_timer', EMPTY_TIMER)
-  const [settings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
+  const [_rawSettings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
+  // Always merge stored settings with defaults so new keys (e.g. completionSound) are never undefined
+  const settings = { ...DEFAULT_SETTINGS, ..._rawSettings }
   const [presets, setPresets] = useLocalStorage('ft_presets', [])
   const [sessions, setSessions] = useLocalStorage('ft_sessions', [])
   const [activeTab, setActiveTab] = useState('home')
@@ -117,8 +119,27 @@ export default function App() {
   }, [settings.soundscape, settings.soundscapeVolume])
 
   // ── Timer controls ───────────────────────────────────────────────────────
+
+  // selectTask: preload a task into the timer WITHOUT starting it.
+  // Tapping a task card calls this. The play button (toggleTimer) starts it.
+  const selectTask = useCallback((taskId) => {
+    setTimerState(prev => {
+      // If same task is already loaded (even if running), do nothing
+      if (prev.activeTaskId === taskId) return prev
+      return {
+        activeTaskId: taskId,
+        startTimestamp: null,
+        accumulatedSeconds: 0,
+        isRunning: false,
+      }
+    })
+    sessionStartRef.current = null
+  }, [setTimerState])
+
+  // Keep startTask for internal auto-advance (starts immediately)
   const startTask = useCallback((taskId) => {
     sessionStartRef.current = Date.now()
+    chimeCountRef.current = 0
     setTimerState({
       activeTaskId: taskId,
       startTimestamp: Date.now(),
@@ -138,6 +159,8 @@ export default function App() {
   }, [setTimerState])
 
   const resumeTimer = useCallback(() => {
+    // Set session start the first time this task actually runs
+    if (!sessionStartRef.current) sessionStartRef.current = Date.now()
     setTimerState(prev => ({ ...prev, startTimestamp: Date.now(), isRunning: true }))
   }, [setTimerState])
 
@@ -177,11 +200,17 @@ export default function App() {
 
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true, actualSeconds: elapsed } : t))
 
+    // Auto-advance: start the next incomplete task immediately
     if (timerState.activeTaskId === taskId) {
-      setTimerState(EMPTY_TIMER)
+      const nextTask = tasks.find(t => !t.completed && t.id !== taskId)
+      if (nextTask) {
+        startTask(nextTask.id)
+      } else {
+        setTimerState(EMPTY_TIMER)
+      }
     }
 
-    playCompletionSound(settings.completionSound)
+    playCompletionSound(settings.completionSound ?? 'tada')
 
     if (settings.confettiEnabled) {
       launchConfetti({ big: false })
@@ -194,7 +223,7 @@ export default function App() {
         })
       }, 500)
     }
-  }, [tasks, timerState.activeTaskId, elapsed, settings.completionSound, settings.confettiEnabled, setTasks, setTimerState, setSessions])
+  }, [tasks, timerState.activeTaskId, elapsed, settings.completionSound, settings.confettiEnabled, setTasks, setTimerState, setSessions, startTask])
 
   // ── Task CRUD ────────────────────────────────────────────────────────────
   // addTask: ID generated outside the updater so StrictMode double-invoke is idempotent
@@ -328,7 +357,7 @@ export default function App() {
     settings, setSettings,
     presets, savePreset, loadPreset, deletePreset,
     sessions,
-    addTask, startTask, pauseTimer, resumeTimer, toggleTimer, adjustTime,
+    addTask, selectTask, startTask, pauseTimer, resumeTimer, toggleTimer, adjustTime,
     completeTask, deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
     onEmojiTheme, onColorTheme, resetTask, clearCompleted,
     totalRemainingSeconds, endTime, totalListMinutes, flashOvertime,

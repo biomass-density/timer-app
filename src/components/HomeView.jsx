@@ -3,6 +3,33 @@ import { TASK_COLORS, EMOJI_THEMES, COLOR_THEMES } from '../utils/taskUtils'
 import { formatMMSS } from '../utils/timeUtils'
 import TaskItem from './TaskItem'
 
+// ── Schedule helpers ──────────────────────────────────────────────────────────
+function fmtClock(ms) {
+  const d = new Date(ms)
+  const h = d.getHours(), m = d.getMinutes()
+  const ampm = h >= 12 ? 'pm' : 'am'
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+function computeSchedule(incompleteTasks, activeTaskId, elapsed) {
+  const nowMs = Date.now()
+  const times = []
+  let cursor = nowMs
+  for (const task of incompleteTasks) {
+    const durMs = task.durationMinutes * 60 * 1000
+    if (task.id === activeTaskId) {
+      const start = nowMs - elapsed * 1000
+      const end = start + durMs
+      times.push({ start, end })
+      cursor = Math.max(nowMs, end)
+    } else {
+      times.push({ start: cursor, end: cursor + durMs })
+      cursor += durMs
+    }
+  }
+  return times
+}
+
 // ── SVG constants — slightly larger viewBox so clock numbers fit ──────────
 const CX = 140, CY = 140, R = 110
 const TICK_OUTER = 118, TICK_MED = 112, TICK_INNER = 107
@@ -64,8 +91,8 @@ function ClockFace({ fractionOfHour, fillColor, isOvertime }) {
 export default function HomeView({
   tasks, incompleteTasks, completedTasks,
   timerState, elapsed, activeTask,
-  startTask, toggleTimer, adjustTime, completeTask,
-  deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
+  selectTask, toggleTimer, adjustTime, completeTask,
+  deleteTask, moveToTop, updateTask, reorderTasks,
   onEmojiTheme, onColorTheme, resetTask, clearCompleted,
   showQuickAdd, quickInput, setQuickInput, onSubmitQuickAdd, onCancelQuickAdd, quickInputRef,
 }) {
@@ -114,6 +141,8 @@ export default function HomeView({
     touchDragRef.current = null; setDragOverId(null)
   }
   const drag = { onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd }
+
+  const schedule = computeSchedule(incompleteTasks, timerState.activeTaskId, elapsed)
 
   return (
     <div className="home-view">
@@ -188,24 +217,33 @@ export default function HomeView({
           </div>
         )}
 
-        {incompleteTasks.map(task => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            isActive={task.id === timerState.activeTaskId}
-            elapsed={elapsed}
-            timerState={timerState}
-            isDragOver={dragOverId === task.id}
-            onStart={startTask}
-            onToggleTimer={toggleTimer}
-            onComplete={completeTask}
-            onDelete={deleteTask}
-            onMoveTop={moveToTop}
-            onUpdate={updateTask}
-            onReset={resetTask}
-            {...drag}
-          />
-        ))}
+        {incompleteTasks.map((task, idx) => {
+          const t = schedule[idx]
+          return (
+            <div key={task.id}>
+              {t && (
+                <div className="task-time-badge">
+                  {fmtClock(t.start)} → {fmtClock(t.end)}
+                </div>
+              )}
+              <TaskItem
+                task={task}
+                isActive={task.id === timerState.activeTaskId}
+                elapsed={elapsed}
+                timerState={timerState}
+                isDragOver={dragOverId === task.id}
+                onSelect={selectTask}
+                onToggleTimer={toggleTimer}
+                onComplete={completeTask}
+                onDelete={deleteTask}
+                onMoveTop={moveToTop}
+                onUpdate={updateTask}
+                onReset={resetTask}
+                {...drag}
+              />
+            </div>
+          )
+        })}
 
         {completedTasks.length > 0 && (
           <>
@@ -216,7 +254,7 @@ export default function HomeView({
             {completedTasks.map(task => (
               <TaskItem key={task.id} task={task} isActive={false} elapsed={0}
                 timerState={timerState} isDragOver={false}
-                onStart={() => {}} onToggleTimer={() => {}} onComplete={() => {}}
+                onSelect={() => {}} onToggleTimer={() => {}} onComplete={() => {}}
                 onDelete={deleteTask} onMoveTop={moveToTop} onUpdate={updateTask} onReset={() => {}}
                 onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}}
                 onDragEnd={() => {}} onTouchStart={() => {}} onTouchMove={() => {}} onTouchEnd={() => {}}
