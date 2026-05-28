@@ -220,28 +220,24 @@ export default function HomeView({
         {incompleteTasks.map((task, idx) => {
           const t = schedule[idx]
           return (
-            <div key={task.id}>
-              {t && (
-                <div className="task-time-badge">
-                  {fmtClock(t.start)} → {fmtClock(t.end)}
-                </div>
-              )}
-              <TaskItem
-                task={task}
-                isActive={task.id === timerState.activeTaskId}
-                elapsed={elapsed}
-                timerState={timerState}
-                isDragOver={dragOverId === task.id}
-                onSelect={selectTask}
-                onToggleTimer={toggleTimer}
-                onComplete={completeTask}
-                onDelete={deleteTask}
-                onMoveTop={moveToTop}
-                onUpdate={updateTask}
-                onReset={resetTask}
-                {...drag}
-              />
-            </div>
+            <TaskItem
+              key={task.id}
+              task={task}
+              isActive={task.id === timerState.activeTaskId}
+              elapsed={elapsed}
+              timerState={timerState}
+              isDragOver={dragOverId === task.id}
+              schedStart={t?.start}
+              schedEnd={t?.end}
+              onSelect={selectTask}
+              onToggleTimer={toggleTimer}
+              onComplete={completeTask}
+              onDelete={deleteTask}
+              onMoveTop={moveToTop}
+              onUpdate={updateTask}
+              onReset={resetTask}
+              {...drag}
+            />
           )
         })}
 

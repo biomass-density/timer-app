@@ -3,8 +3,16 @@ import { TASK_COLORS } from '../utils/taskUtils'
 import { formatMMSS, formatDuration } from '../utils/timeUtils'
 import EmojiColorPicker from './EmojiColorPicker'
 
+function fmtT(ms) {
+  if (!ms) return ''
+  const d = new Date(ms)
+  const h = d.getHours(), m = d.getMinutes()
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')}${h >= 12 ? 'pm' : 'am'}`
+}
+
 export default function TaskItem({
   task, isActive, elapsed, timerState, isDragOver,
+  schedStart, schedEnd,
   onSelect, onToggleTimer, onComplete, onDelete, onMoveTop, onUpdate, onReset,
   onDragStart, onDragOver, onDrop, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
 }) {
@@ -59,6 +67,13 @@ export default function TaskItem({
               {task.title}
             </div>
           </div>
+
+          {!task.completed && schedStart && (
+            <div className="task-sched-time">
+              <span>{fmtT(schedStart)}</span>
+              <span>{fmtT(schedEnd)}</span>
+            </div>
+          )}
 
           {!task.completed && (
             <span

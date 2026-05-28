@@ -320,6 +320,18 @@ input, textarea { font: inherit; }
   cursor: pointer;
   padding: 4px;
 }
+.task-sched-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--task-text2, var(--text-3));
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+}
 .task-drag-handle {
   color: var(--task-text2, var(--text-3));
   font-size: 16px;
