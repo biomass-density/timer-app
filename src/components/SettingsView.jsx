@@ -16,6 +16,14 @@ const ALARM_TYPES = [
   { value: 'continuous', label: 'Continuous chime' },
 ]
 
+const COMPLETION_SOUNDS = [
+  { value: 'none',    label: 'None' },
+  { value: 'chime',   label: '🔔 Chime' },
+  { value: 'tada',    label: '🎵 Tada' },
+  { value: 'fanfare', label: '🎺 Fanfare' },
+  { value: 'bell',    label: '🔔 Bell' },
+]
+
 const CHIME_INTERVALS = [
   { value: 0,  label: 'Off' },
   { value: 5,  label: 'Every 5 min' },
@@ -77,6 +85,23 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
             onChange={e => updateSetting('chimeInterval', Number(e.target.value))}
           >
             {CHIME_INTERVALS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="setting-row">
+          <span className="setting-row-icon">✅</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">Completion sound</div>
+            <div className="setting-row-desc">Plays when you complete a task</div>
+          </div>
+          <select
+            className="setting-select"
+            value={settings.completionSound ?? 'tada'}
+            onChange={e => updateSetting('completionSound', e.target.value)}
+          >
+            {COMPLETION_SOUNDS.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
@@ -181,7 +206,7 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
 
       <div style={{ height: 16 }} />
       <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', paddingBottom: 8 }}>
-        🦙 Focus Timer · All data stored locally
+        🦝 Focus Timer · All data stored locally
       </p>
     </div>
   )

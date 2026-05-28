@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
-import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, getAutoEmoji, getAestheticPalette } from './utils/taskUtils'
+import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
-import { playChime, playAlarmBell, startSoundscape, stopSoundscape } from './utils/audioUtils'
+import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound } from './utils/audioUtils'
 import { launchConfetti } from './utils/confetti'
 import Header from './components/Header'
 import TabBar from './components/TabBar'
 import HomeView from './components/HomeView'
+import ListView from './components/ListView'
 import SettingsView from './components/SettingsView'
 
 const DEFAULT_SETTINGS = {
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS = {
   soundscape: null,
   soundscapeVolume: 0.5,
   confettiEnabled: true,
+  completionSound: 'tada',
 }
 
 const EMPTY_TIMER = {
@@ -179,6 +181,8 @@ export default function App() {
       setTimerState(EMPTY_TIMER)
     }
 
+    playCompletionSound(settings.completionSound)
+
     if (settings.confettiEnabled) {
       launchConfetti({ big: false })
       // Big confetti if this was the last task
@@ -190,7 +194,7 @@ export default function App() {
         })
       }, 500)
     }
-  }, [tasks, timerState.activeTaskId, elapsed, settings.confettiEnabled, setTasks, setTimerState, setSessions])
+  }, [tasks, timerState.activeTaskId, elapsed, settings.completionSound, settings.confettiEnabled, setTasks, setTimerState, setSessions])
 
   // ── Task CRUD ────────────────────────────────────────────────────────────
   // addTask: ID generated outside the updater so StrictMode double-invoke is idempotent
@@ -265,8 +269,13 @@ export default function App() {
 
   const deletePreset = useCallback((id) => setPresets(prev => prev.filter(p => p.id !== id)), [setPresets])
 
+  const clearCompleted = useCallback(() => {
+    setTasks(prev => prev.filter(t => !t.completed))
+  }, [setTasks])
+
   // ── Reset task timer ─────────────────────────────────────────────────────
   const resetTask = useCallback((taskId) => {
+    // Reset elapsed time back to 0
     if (timerState.activeTaskId === taskId) {
       setTimerState(prev => ({
         ...prev,
@@ -274,16 +283,17 @@ export default function App() {
         startTimestamp: prev.isRunning ? Date.now() : null,
       }))
     }
-  }, [timerState.activeTaskId, setTimerState])
+    // Also clear any partial actualSeconds on the task itself
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, actualSeconds: 0 } : t))
+  }, [timerState.activeTaskId, setTimerState, setTasks])
 
-  // ── Auto emoji / color ───────────────────────────────────────────────────
-  const autoEmoji = useCallback(() => {
-    setTasks(prev => prev.map(t => ({ ...t, emoji: getAutoEmoji(t.title) })))
+  // ── Emoji / color themes ─────────────────────────────────────────────────
+  const onEmojiTheme = useCallback((themeId) => {
+    setTasks(prev => applyEmojiTheme(prev, themeId))
   }, [setTasks])
 
-  const autoColor = useCallback(() => {
-    const palette = getAestheticPalette()
-    setTasks(prev => prev.map((t, i) => ({ ...t, color: palette[i % palette.length] })))
+  const onColorTheme = useCallback((themeId) => {
+    setTasks(prev => applyColorTheme(prev, themeId))
   }, [setTasks])
 
   // ── Quick add handlers ───────────────────────────────────────────────────
@@ -320,8 +330,13 @@ export default function App() {
     sessions,
     addTask, startTask, pauseTimer, resumeTimer, toggleTimer, adjustTime,
     completeTask, deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
-    autoEmoji, autoColor, resetTask,
+    onEmojiTheme, onColorTheme, resetTask, clearCompleted,
     totalRemainingSeconds, endTime, totalListMinutes, flashOvertime,
+    // Quick-add (HomeView renders inline bar)
+    showQuickAdd, quickInput, setQuickInput,
+    onSubmitQuickAdd: handleQuickAdd,
+    onCancelQuickAdd: () => { setShowQuickAdd(false); setQuickInput('') },
+    quickInputRef,
   }
 
   return (
@@ -336,38 +351,19 @@ export default function App() {
 
         <main className={`view-content${activeTab === 'home' ? ' view-home' : ''}`}>
           {activeTab === 'home'     && <HomeView {...shared} />}
+          {activeTab === 'list'     && <ListView {...shared} />}
           {activeTab === 'settings' && <SettingsView {...shared} />}
         </main>
 
-        {/* Quick-add overlay — input bar floats above tab bar */}
-        {activeTab === 'home' && showQuickAdd && (
-          <form className="quick-add-overlay" onSubmit={handleQuickAdd}>
-            <input
-              ref={quickInputRef}
-              className="quick-add-overlay-input"
-              type="text"
-              placeholder='Task… or "Write report 30" for 30 min'
-              value={quickInput}
-              onChange={e => setQuickInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Escape') { setShowQuickAdd(false); setQuickInput('') }
-              }}
-              autoFocus
-            />
-          </form>
-        )}
-
-        {/* FAB — when overlay open it becomes the submit/confirm button */}
+        {/* FAB — opens inline quick-add at top of task list */}
         {activeTab === 'home' && (
           <button
-            className={`fab${showQuickAdd ? ' fab-confirm' : ''}`}
-            onClick={showQuickAdd ? handleQuickAdd : handleFab}
-            aria-label={showQuickAdd ? 'Add task' : 'Open add task'}
+            className="fab"
+            onClick={handleFab}
+            aria-label={showQuickAdd ? 'Close add task' : 'Open add task'}
           >
             {showQuickAdd
-              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+              ? <span style={{ display: 'block', lineHeight: 1, fontSize: 26, fontWeight: 300 }}>×</span>
               : <span style={{ display: 'block', lineHeight: 1, fontSize: 28 }}>+</span>
             }
           </button>

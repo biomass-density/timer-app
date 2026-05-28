@@ -20,14 +20,14 @@ export function parseTaskInput(raw) {
 }
 
 export const TASK_COLORS = {
-  red:    { bg: '#FF6B6B', light: '#FFF0F0', chip: '#FFD6D6', label: 'Red' },
-  orange: { bg: '#FF9F43', light: '#FFF5E8', chip: '#FFE0BB', label: 'Orange' },
-  yellow: { bg: '#F5CB5C', light: '#FFFBE8', chip: '#FCEDB0', label: 'Yellow' },
-  green:  { bg: '#51CF66', light: '#EDFAF0', chip: '#B8F0C1', label: 'Green' },
-  teal:   { bg: '#20C997', light: '#E5FAF4', chip: '#9FEEDB', label: 'Teal' },
-  blue:   { bg: '#4DA6FF', light: '#E5F2FF', chip: '#B3D6FF', label: 'Blue' },
-  purple: { bg: '#9B6FD4', light: '#F0E8FF', chip: '#D4BAFF', label: 'Purple' },
-  pink:   { bg: '#F06595', light: '#FFE5EF', chip: '#FFB8D0', label: 'Pink' },
+  red:    { bg: '#FF6B6B', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFF0F0', chip: '#FFD6D6', label: 'Red' },
+  orange: { bg: '#FF9F43', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFF5E8', chip: '#FFE0BB', label: 'Orange' },
+  yellow: { bg: '#F5CB5C', text: '#2A1D00',  text2: 'rgba(42,29,0,0.58)',   btnBg: 'rgba(0,0,0,0.10)',       light: '#FFFBE8', chip: '#FCEDB0', label: 'Yellow' },
+  green:  { bg: '#51CF66', text: '#0d2a14',  text2: 'rgba(13,42,20,0.62)',  btnBg: 'rgba(0,0,0,0.10)',       light: '#EDFAF0', chip: '#B8F0C1', label: 'Green' },
+  teal:   { bg: '#20C997', text: '#082820',  text2: 'rgba(8,40,32,0.62)',   btnBg: 'rgba(0,0,0,0.10)',       light: '#E5FAF4', chip: '#9FEEDB', label: 'Teal' },
+  blue:   { bg: '#4DA6FF', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#E5F2FF', chip: '#B3D6FF', label: 'Blue' },
+  purple: { bg: '#9B6FD4', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#F0E8FF', chip: '#D4BAFF', label: 'Purple' },
+  pink:   { bg: '#F06595', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFE5EF', chip: '#FFB8D0', label: 'Pink' },
 }
 
 export const COLOR_KEYS = Object.keys(TASK_COLORS)
@@ -94,4 +94,64 @@ const PALETTES = [
 
 export function getAestheticPalette() {
   return PALETTES[Math.floor(Math.random() * PALETTES.length)]
+}
+
+// ── Emoji themes ──────────────────────────────────────────────────────────────
+export const EMOJI_THEMES = [
+  { id: 'auto',      name: 'Match tasks!',        preview: '🔍', emojis: null },
+  { id: 'random',    name: 'Surprise Me',          preview: '🎲', emojis: null },
+  { id: 'summer',    name: 'Summer',               preview: '☀️', emojis: ['☀️','🌊','🏖️','🌴','🍦','🕶️','🌻','🏄','🍹','🐚','🦀','🌞','👒','🎪','🌅'] },
+  { id: 'fall',      name: 'Fall/Autumn',          preview: '🍂', emojis: ['🍂','🍁','🎃','🌾','🦔','☕','🍄','🌰','🍎','🦃','🪔','🌽','🍵','🎑','🍠'] },
+  { id: 'winter',    name: 'Winter',               preview: '❄️', emojis: ['❄️','⛄','🌨️','🎿','🧣','☃️','🏔️','🫖','🧤','🦌','🎅','🔔','🕯️','🧊','⛷️'] },
+  { id: 'spring',    name: 'Spring',               preview: '🌸', emojis: ['🌸','🌷','🦋','🌿','🐣','🌼','🐝','🌱','🦜','🌺','🐞','🌈','🐸','🍓','🪻'] },
+  { id: 'celebrate', name: "Let's Celebrate!",     preview: '🎉', emojis: ['🎉','🎊','🥳','🎈','✨','🎁','🍾','🥂','🎆','🎇','🎀','🏆','🌟','💃','🎶'] },
+  { id: 'sweet',     name: 'Sweet Tooth',          preview: '🍰', emojis: ['🍰','🧁','🍭','🍬','🍫','🍩','🍪','🎂','🍮','🍡','🍦','🧋','🍨','🫙','🍯'] },
+  { id: 'nature',    name: 'Touch Grass',          preview: '🌿', emojis: ['🌿','🍃','🌲','🌳','🦋','🐛','🌸','🍀','🌾','🐸','🌻','🐢','🦎','🍄','🪨'] },
+  { id: 'fantasy',   name: 'Once Upon a Time',     preview: '🏰', emojis: ['🏰','🐉','🧙','⚔️','🔮','🦄','📜','🧝','👑','🪄','🗡️','🛡️','🧞','🧜','🔱'] },
+  { id: 'animals',   name: 'The Zoo',              preview: '🦁', emojis: ['🦁','🐘','🦒','🐧','🦊','🐼','🦓','🦏','🐨','🦍','🐅','🦭','🦛','🦩','🦚'] },
+  { id: 'fruit',     name: 'Fruit Salad',          preview: '🍓', emojis: ['🍓','🍇','🍊','🍋','🍑','🥭','🍍','🥝','🍒','🍌','🍎','🍉','🍈','🫐','🍐'] },
+  { id: 'circles',   name: 'Rainbow Circles',      preview: '🔵', emojis: ['🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫','⚪','🔶','🔷','🔸','🔹','🟥','🟦'] },
+  { id: 'snacks',    name: 'Wholesome Snacks',     preview: '🧀', emojis: ['🧀','🥪','🥨','🍿','🥐','🧇','🥞','🍱','🥙','🫔','🥗','🥫','🍘','🧃','🫙'] },
+  { id: 'zombie',    name: 'Zombie Apocalypse',    preview: '🧟', emojis: ['🧟','💀','🪦','🔪','☢️','🦷','🏚️','🧠','👁️','⚰️','🩸','🔦','🪓','🕷️','☠️'] },
+]
+
+export function applyEmojiTheme(tasks, themeId) {
+  if (themeId === 'auto') return tasks.map(t => ({ ...t, emoji: getAutoEmoji(t.title) }))
+  if (themeId === 'random') {
+    const pool = EMOJI_THEMES.flatMap(t => t.emojis ?? [])
+    return tasks.map(t => ({ ...t, emoji: pool[Math.floor(Math.random() * pool.length)] }))
+  }
+  const theme = EMOJI_THEMES.find(t => t.id === themeId)
+  if (!theme?.emojis) return tasks
+  return tasks.map((t, i) => ({ ...t, emoji: theme.emojis[i % theme.emojis.length] }))
+}
+
+// ── Color themes ──────────────────────────────────────────────────────────────
+export const COLOR_THEMES = [
+  { id: 'rainbow',    name: 'Rainbow Bliss',       colors: ['red','orange','yellow','green','teal','blue','purple','pink'] },
+  { id: 'ocean',      name: 'Ocean Mist',          colors: ['blue','teal','blue','teal','blue','teal','blue','teal'] },
+  { id: 'grape',      name: 'Crunchy Grape',       colors: ['purple','purple','pink','purple','purple','pink','purple','purple'] },
+  { id: 'leaves',     name: 'Rustling Leaves',     colors: ['orange','red','yellow','orange','red','orange','yellow','orange'] },
+  { id: 'lavender',   name: 'Lavender Cupcakes',   colors: ['purple','pink','purple','pink','purple','pink','purple','pink'] },
+  { id: 'skies',      name: 'Clear Skies',         colors: ['blue','blue','teal','blue','blue','teal','blue','blue'] },
+  { id: 'passion',    name: 'Passionfruit Delight',colors: ['pink','red','pink','purple','pink','red','pink','purple'] },
+  { id: 'yam',        name: 'Bubble Yam',          colors: ['purple','orange','purple','orange','purple','orange','purple','orange'] },
+  { id: 'tangerine',  name: 'Tangerine Twist',     colors: ['orange','yellow','orange','orange','yellow','orange','yellow','orange'] },
+  { id: 'jungle',     name: 'Jungle Fever',        colors: ['green','teal','green','green','teal','green','teal','green'] },
+  { id: 'cornfield',  name: 'Cornfield Breeze',    colors: ['yellow','green','yellow','green','yellow','green','yellow','green'] },
+  { id: 'watermelon', name: 'Watermelon Pop',      colors: ['red','green','red','green','red','green','red','green'] },
+  { id: 'vibrant',    name: 'Vibrant Day',         colors: ['orange','yellow','green','teal','blue','purple','pink','red'] },
+  { id: 'surprise',   name: '✨ Surprise Me',      colors: null },
+  { id: 'none',       name: '✕ Reset colors',     colors: null },
+]
+
+export function applyColorTheme(tasks, themeId) {
+  if (themeId === 'none') return tasks.map((t, i) => ({ ...t, color: COLOR_KEYS[i % COLOR_KEYS.length] }))
+  if (themeId === 'surprise') {
+    const palette = getAestheticPalette()
+    return tasks.map((t, i) => ({ ...t, color: palette[i % palette.length] }))
+  }
+  const theme = COLOR_THEMES.find(t => t.id === themeId)
+  if (!theme?.colors) return tasks
+  return tasks.map((t, i) => ({ ...t, color: theme.colors[i % theme.colors.length] }))
 }

@@ -145,3 +145,50 @@ export function stopSoundscape() {
 export function setSoundscapeVolume(vol) {
   if (soundGain) soundGain.gain.value = vol
 }
+
+// ── Completion sounds ─────────────────────────────────────────────────────────
+function playTada(ac) {
+  // Ascending major arpeggio: C4 E4 G4 C5
+  [261.63, 329.63, 392, 523.25].forEach((freq, i) => {
+    const osc = ac.createOscillator()
+    const gain = ac.createGain()
+    osc.connect(gain); gain.connect(ac.destination)
+    osc.type = 'triangle'
+    osc.frequency.value = freq
+    const t = ac.currentTime + i * 0.09
+    gain.gain.setValueAtTime(0, t)
+    gain.gain.linearRampToValueAtTime(0.28, t + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6)
+    osc.start(t); osc.stop(t + 0.6)
+  })
+}
+
+function playFanfare(ac) {
+  // Short ascending scale G4→C5→E5→G5, last note held
+  [392, 523.25, 659.25, 783.99].forEach((freq, i) => {
+    const osc = ac.createOscillator()
+    const filt = ac.createBiquadFilter()
+    const gain = ac.createGain()
+    filt.type = 'lowpass'; filt.frequency.value = 2400
+    osc.connect(filt); filt.connect(gain); gain.connect(ac.destination)
+    osc.type = 'sawtooth'
+    osc.frequency.value = freq
+    const t = ac.currentTime + i * 0.11
+    const hold = i === 3 ? 0.5 : 0.18
+    gain.gain.setValueAtTime(0, t)
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + hold)
+    osc.start(t); osc.stop(t + hold)
+  })
+}
+
+export function playCompletionSound(type) {
+  if (!type || type === 'none') return
+  try {
+    const ac = getCtx()
+    if (type === 'chime')   { playChime();      return }
+    if (type === 'bell')    { playAlarmBell();  return }
+    if (type === 'tada')    { playTada(ac);     return }
+    if (type === 'fanfare') { playFanfare(ac);  return }
+  } catch {}
+}

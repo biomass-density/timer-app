@@ -15,7 +15,9 @@ export default function TaskItem({
   const displaySec = isActive ? plannedSec - elapsed : plannedSec
   const isOvertime = isActive && displaySec < 0
   const timeLabel = isActive ? formatMMSS(Math.abs(displaySec)) : formatDuration(plannedSec)
-  const elapsedLabel = isActive ? formatDuration(Math.max(0, elapsed)) : (task.actualSeconds ? formatDuration(task.actualSeconds) : '0:00')
+  const elapsedLabel = isActive
+    ? formatDuration(Math.max(0, elapsed))
+    : (task.actualSeconds ? formatDuration(task.actualSeconds) : '0:00')
 
   function handleCardTap() {
     if (task.completed) return
@@ -23,10 +25,19 @@ export default function TaskItem({
     else onStart(task.id)
   }
 
+  // CSS custom properties drive all colors inside the card
+  const cardStyle = {
+    background: color.bg,
+    '--task-text':    color.text,
+    '--task-text2':   color.text2,
+    '--task-btn-bg':  color.btnBg,
+  }
+
   return (
     <>
       <div
         className={`task-item${isActive ? ' active-task' : ''}${task.completed ? ' completed-task' : ''}${isDragOver ? ' drag-over' : ''}`}
+        style={cardStyle}
         data-task-id={task.id}
         draggable={!task.completed}
         onDragStart={e => onDragStart(e, task.id)}
@@ -36,11 +47,11 @@ export default function TaskItem({
       >
         {/* ── Main row ── */}
         <div className="task-main-row" onClick={handleCardTap}>
-          <div className="task-color-bar" style={{ background: color.bg }} />
+          {/* Subtle dark left bar on the colored card */}
+          <div className="task-color-bar" />
 
           <div
             className="task-emoji-tile"
-            style={{ background: `${color.bg}28` }}
             onClick={e => { e.stopPropagation(); if (!task.completed) setShowPicker(true) }}
           >
             {task.emoji}
@@ -86,8 +97,12 @@ export default function TaskItem({
             >Delete</button>
             <button
               className="task-action-btn"
-              onClick={e => { e.stopPropagation(); isActive ? onReset(task.id) : onMoveTop(task.id) }}
-            >{isActive ? 'Reset' : 'Top'}</button>
+              onClick={e => { e.stopPropagation(); onReset(task.id) }}
+            >Reset</button>
+            <button
+              className="task-action-btn"
+              onClick={e => { e.stopPropagation(); onMoveTop(task.id) }}
+            >Top</button>
             <button
               className="task-action-btn accent"
               onClick={e => { e.stopPropagation(); onComplete(task.id) }}

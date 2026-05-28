@@ -75,6 +75,7 @@ input, textarea { font: inherit; }
   scroll-behavior: smooth;
   padding-top: var(--header-h);
   padding-bottom: calc(var(--tab-h) + var(--safe-b) + 16px);
+  background: var(--bg-2);
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
@@ -205,8 +206,13 @@ input, textarea { font: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px 16px;
+  margin: 8px 12px 0;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  position: relative;
+  z-index: 2;
 }
 .task-list-section {
   flex: 1;
@@ -240,22 +246,39 @@ input, textarea { font: inherit; }
   letter-spacing: 0.08em;
   color: var(--text-3);
   padding: 12px 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+.clear-completed-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: background var(--trans), color var(--trans);
+}
+.clear-completed-btn:active { background: var(--danger); color: white; border-color: var(--danger); }
 
 /* ── Task item ───────────────────────────────────────────────────────────── */
+/* Background, text, and button colors come from CSS custom properties       */
+/* set via inline style: --task-text, --task-text2, --task-btn-bg            */
 .task-item {
-  background: var(--bg);
   border-radius: var(--r-lg);
   margin-bottom: 10px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 8px rgba(0,0,0,0.04);
-  border: 1px solid var(--border);
-  transition: box-shadow var(--trans);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.13), 0 1px 2px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.08);
+  transition: box-shadow var(--trans), transform var(--trans);
   user-select: none;
 }
-.task-item.drag-over { box-shadow: 0 0 0 2px var(--accent); }
-.task-item.completed-task { opacity: 0.5; box-shadow: none; }
-.task-item.active-task { box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(83,74,183,0.15); }
+.task-item.drag-over { box-shadow: 0 0 0 3px rgba(255,255,255,0.9), 0 0 0 5px rgba(0,0,0,0.25); }
+.task-item.completed-task { opacity: 0.45; box-shadow: none; }
+/* No special ring for active tasks — color + play button state is enough */
 
 .task-main-row {
   display: flex;
@@ -265,12 +288,15 @@ input, textarea { font: inherit; }
   position: relative;
   cursor: pointer;
 }
+/* Subtle dark left accent bar on the colored card */
 .task-color-bar {
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 4px;
   border-radius: 4px 0 0 4px;
+  background: rgba(0,0,0,0.16);
 }
+/* Translucent "frosted" tile — works on any background color */
 .task-emoji-tile {
   width: 42px;
   height: 42px;
@@ -280,36 +306,37 @@ input, textarea { font: inherit; }
   justify-content: center;
   font-size: 22px;
   flex-shrink: 0;
+  background: var(--task-btn-bg, rgba(255,255,255,0.22));
 }
 .task-title-wrap { flex: 1; min-width: 0; }
 .task-title {
   font-size: 17px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--task-text, var(--text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .task-title.done-title {
   text-decoration: line-through;
-  color: var(--text-3);
+  color: var(--task-text, var(--text-3));
   font-weight: 400;
+  opacity: 0.75;
 }
 .task-chevron {
-  color: var(--text-3);
+  color: var(--task-text2, var(--text-3));
   flex-shrink: 0;
-  opacity: 0.45;
   cursor: pointer;
   padding: 4px;
 }
 .task-drag-handle {
-  color: var(--text-3);
+  color: var(--task-text2, var(--text-3));
   font-size: 16px;
   padding: 4px 2px;
   flex-shrink: 0;
   cursor: grab;
   touch-action: none;
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 /* Always-visible action row */
@@ -317,35 +344,53 @@ input, textarea { font: inherit; }
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 6px 14px 12px 22px;
+  padding: 0 14px 12px 22px;
+  border-top: 1px solid var(--task-btn-bg, rgba(0,0,0,0.08));
+  padding-top: 8px;
 }
 .task-action-time {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-3);
+  color: var(--task-text2, var(--text-3));
   font-variant-numeric: tabular-nums;
   min-width: 46px;
   margin-right: 4px;
 }
-.task-action-time.overtime { color: var(--overtime); }
+.task-action-time.overtime {
+  color: var(--task-text, var(--overtime));
+  font-weight: 700;
+}
 .task-action-btn {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-3);
-  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--task-text2, var(--text-3));
+  padding: 3px 8px;
   border-radius: 6px;
-  transition: background var(--trans), color var(--trans);
+  transition: background var(--trans);
   white-space: nowrap;
 }
-.task-action-btn:active { background: var(--bg-2); }
-.task-action-btn.danger { color: var(--danger); opacity: 0.8; }
-.task-action-btn.accent { color: var(--accent); font-weight: 500; }
+.task-action-btn:active { background: var(--task-btn-bg, var(--bg-2)); }
+/* Danger: slightly brighter than secondary text so it reads as "caution" */
+.task-action-btn.danger {
+  color: var(--task-text2, var(--danger));
+  opacity: 0.9;
+}
+/* Done: prominent pill button */
+.task-action-btn.accent {
+  color: var(--task-text, var(--text));
+  font-weight: 700;
+  background: var(--task-btn-bg, var(--accent-pale));
+  padding: 3px 12px;
+}
+.task-action-btn.accent:active {
+  filter: brightness(0.9);
+}
 .task-action-elapsed {
-  font-size: 13px;
-  color: var(--text-3);
+  font-size: 12px;
+  color: var(--task-text2, var(--text-3));
   font-variant-numeric: tabular-nums;
   margin-left: auto;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .random-pick-btn {
@@ -363,42 +408,59 @@ input, textarea { font: inherit; }
   border: 1px solid var(--border);
 }
 
-/* ── Add task input / quick-add ─────────────────────────────────────────── */
-/* ── Quick-add overlay (App-level, above tab bar) ─────────────────────── */
-.quick-add-overlay {
-  position: fixed;
-  bottom: calc(var(--tab-h) + var(--safe-b) + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 24px);
-  max-width: 406px;
+/* ── Quick-add inline bar (inside task-list-section, at the top) ─────────── */
+.quick-add-inline {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
   background: var(--bg);
-  border: 2px solid var(--accent);
+  border: 1px solid var(--accent-mid);
   border-radius: var(--r-lg);
-  box-shadow: 0 4px 24px rgba(83,74,183,0.22);
-  z-index: 80;
-  animation: quickAddIn 0.18s cubic-bezier(.32,1,.28,1);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 6px rgba(83,74,183,0.1);
+  animation: quickAddSlideIn 0.16s cubic-bezier(.32,1,.28,1);
 }
-@keyframes quickAddIn {
-  from { transform: translateX(-50%) translateY(12px); opacity: 0; }
-  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+@keyframes quickAddSlideIn {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
-.quick-add-overlay-input {
+.quick-add-inline-input {
   flex: 1;
   border: none;
   outline: none;
+  /* 16px prevents iOS from zooming in on focus */
   font-size: 16px;
   background: transparent;
   color: var(--text);
+  min-width: 0;
 }
-.quick-add-overlay-input::placeholder { color: var(--text-3); }
-.fab-confirm {
-  background: var(--accent) !important;
-  box-shadow: 0 4px 14px rgba(83,74,183,0.45) !important;
+.quick-add-inline-input::placeholder { color: var(--text-3); font-size: 14px; }
+.quick-add-inline-submit {
+  background: var(--accent);
+  color: white;
+  border-radius: var(--r-sm);
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+.quick-add-inline-submit:active { transform: scale(0.92); }
+.quick-add-inline-cancel {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--text-3);
+  font-size: 20px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  padding-bottom: 1px;
 }
 
 .fab {
@@ -440,20 +502,24 @@ input, textarea { font: inherit; }
 .no-active-task-msg .no-task-icon { font-size: 36px; margin-bottom: 6px; }
 .no-active-task-msg p { font-size: 13px; color: var(--text-3); }
 
-.pie-with-adj {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  justify-content: center;
-}
 .pie-wrap {
   position: relative;
-  width: 260px;
-  height: 260px;
+  width: 240px;
+  height: 240px;
   flex-shrink: 0;
+  margin: 0 auto;
 }
-.pie-svg { width: 260px; height: 260px; }
+.pie-svg { width: 240px; height: 240px; }
+
+/* Digital time row: [−5]  MM:SS  [+5] */
+.pie-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 6px;
+  width: 100%;
+}
 .pie-center-btn {
   position: absolute;
   top: 50%;
@@ -490,11 +556,8 @@ input, textarea { font: inherit; }
   border: 1px solid var(--border);
 }
 .pie-adj-btn:active { transform: scale(0.88); background: var(--border); }
-
-.pie-time-display {
-  text-align: center;
-  margin-top: 4px;
-}
+.pie-adj-btn:disabled { opacity: 0.3; cursor: default; }
+.pie-adj-btn:disabled:active { transform: none; background: var(--bg-2); }
 .pie-time-big {
   font-size: 22px;
   font-weight: 700;
@@ -718,10 +781,12 @@ input, textarea { font: inherit; }
 /* ── Settings view ───────────────────────────────────────────────────────── */
 .settings-view { padding: 16px; }
 .settings-section {
-  background: var(--bg-2);
+  background: var(--bg);
   border-radius: var(--r-lg);
+  border: 1px solid var(--border);
   overflow: hidden;
   margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .settings-section-label {
   font-size: 11px;
@@ -1019,3 +1084,145 @@ input, textarea { font: inherit; }
 /* ── Misc utilities ──────────────────────────────────────────────────────── */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 .mt-auto { margin-top: auto; }
+
+/* ── List / Log view ─────────────────────────────────────────────────────── */
+.list-view {
+  padding: 12px 12px calc(var(--tab-h) + var(--safe-b) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lv-card {
+  background: var(--bg);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.lv-heading {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-3);
+  padding: 12px 14px 8px;
+}
+.lv-table { width: 100%; }
+.lv-header-row,
+.lv-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+}
+.lv-header-row {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  border-top: none;
+  padding-bottom: 4px;
+}
+.lv-row { font-size: 14px; color: var(--text); }
+.lv-row:hover { background: var(--bg-2); }
+.lv-col-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.lv-emoji { font-size: 16px; flex-shrink: 0; }
+.lv-col-set   { width: 52px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); flex-shrink: 0; }
+.lv-col-spent { width: 52px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); flex-shrink: 0; }
+.lv-col-pct   { width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-3); flex-shrink: 0; }
+.lv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.lv-empty-icon { font-size: 40px; }
+.lv-empty p { font-size: 14px; color: var(--text-3); line-height: 1.5; }
+.lv-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.lv-footer-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.lv-footer-icon { font-size: 15px; }
+.lv-footer-label { color: var(--text-3); font-weight: 500; }
+.lv-footer-val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Theme picker sheets (emoji + color) ─────────────────────────────────── */
+.theme-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 55dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+}
+.theme-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: background var(--trans);
+  width: 100%;
+}
+.theme-list-item:active { background: var(--bg-2); }
+.theme-item-preview {
+  font-size: 22px;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.theme-item-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+/* Color theme dot strip */
+.theme-color-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+.theme-color-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.theme-color-dot--star {
+  background: none !important;
+  box-shadow: none;
+  font-size: 18px;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+}

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { TASK_COLORS } from '../utils/taskUtils'
+import { TASK_COLORS, EMOJI_THEMES, COLOR_THEMES } from '../utils/taskUtils'
 import { formatMMSS } from '../utils/timeUtils'
 import TaskItem from './TaskItem'
 
@@ -66,9 +66,12 @@ export default function HomeView({
   timerState, elapsed, activeTask,
   startTask, toggleTimer, adjustTime, completeTask,
   deleteTask, moveToTop, updateTask, reorderTasks, pickRandom,
-  autoEmoji, autoColor, resetTask,
+  onEmojiTheme, onColorTheme, resetTask, clearCompleted,
+  showQuickAdd, quickInput, setQuickInput, onSubmitQuickAdd, onCancelQuickAdd, quickInputRef,
 }) {
   const [dragOverId, setDragOverId] = useState(null)
+  const [showEmojiSheet, setShowEmojiSheet] = useState(false)
+  const [showColorSheet, setShowColorSheet] = useState(false)
   const draggedId = useRef(null)
   const touchDragRef = useRef(null)
 
@@ -115,52 +118,69 @@ export default function HomeView({
   return (
     <div className="home-view">
 
-      {/* ── Fixed pie header ─────────────────────────────────── */}
+      {/* ── Pie header — always visible ───────────────────────── */}
       <div className="pie-section">
-        {!activeTask ? (
-          <div className="no-active-task-msg">
-            <span className="no-task-icon">⏱️</span>
-            <p>Tap a task to start</p>
-          </div>
-        ) : (
-          <>
-            <div className="pie-with-adj">
-              <button className="pie-adj-btn" onClick={() => adjustTime(5 * 60)}>−5</button>
-              <div className="pie-wrap">
-                <ClockFace
-                  fractionOfHour={fractionOfHour}
-                  fillColor={color.bg}
-                  isOvertime={isOvertime}
-                />
-                <button className="pie-center-btn" onClick={toggleTimer}
-                  aria-label={timerState.isRunning ? 'Pause' : 'Play'}
-                >
-                  {timerState.isRunning
-                    ? <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                    : <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><polygon points="7,3 21,12 7,21"/></svg>
-                  }
-                </button>
-              </div>
-              <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)}>+5</button>
-            </div>
 
-            <div className="pie-time-display">
-              <span className={`pie-time-big${isOvertime ? ' overtime' : ''}`}>
-                {isOvertime ? '+' : ''}{formatMMSS(Math.abs(remainSec))}
-              </span>
-            </div>
-          </>
-        )}
+        {/* Clock is always shown; slice appears when a task is active */}
+        <div className="pie-wrap">
+          <ClockFace
+            fractionOfHour={fractionOfHour}
+            fillColor={color.bg}
+            isOvertime={isOvertime}
+          />
+          <button
+            className="pie-center-btn"
+            onClick={toggleTimer}
+            aria-label={timerState.isRunning ? 'Pause' : 'Play'}
+          >
+            {timerState.isRunning
+              ? <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+              : <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><polygon points="7,3 21,12 7,21"/></svg>
+            }
+          </button>
+        </div>
+
+        {/* Digital time with −5 / +5 flanking it */}
+        <div className="pie-time-row">
+          <button className="pie-adj-btn" onClick={() => adjustTime(5 * 60)} disabled={!activeTask}>−5</button>
+          <span className={`pie-time-big${isOvertime ? ' overtime' : ''}`}>
+            {activeTask
+              ? (isOvertime ? '+' : '') + formatMMSS(Math.abs(remainSec))
+              : '00:00'
+            }
+          </span>
+          <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)} disabled={!activeTask}>+5</button>
+        </div>
 
         <div className="pie-action-pills">
-          <button className="pie-action-pill" onClick={autoEmoji}>😊 Emoji Me!</button>
-          <button className="pie-action-pill" onClick={autoColor}>🌈 Color Me!</button>
+          <button className="pie-action-pill" onClick={() => setShowEmojiSheet(true)}>😊 Emoji Me!</button>
+          <button className="pie-action-pill" onClick={() => setShowColorSheet(true)}>🌈 Color Me!</button>
         </div>
       </div>
 
       {/* ── Scrollable task list ─────────────────────────────── */}
       <div className="task-list-section">
-        {tasks.length === 0 && (
+
+        {/* Inline quick-add bar — appears at top when FAB is pressed */}
+        {showQuickAdd && (
+          <form className="quick-add-inline" onSubmit={onSubmitQuickAdd}>
+            <input
+              ref={quickInputRef}
+              className="quick-add-inline-input"
+              placeholder='Enter task name and duration'
+              value={quickInput}
+              onChange={e => setQuickInput(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+              enterKeyHint="done"
+            />
+            <button type="submit" className="quick-add-inline-submit">Add</button>
+            <button type="button" className="quick-add-inline-cancel" onClick={onCancelQuickAdd} aria-label="Cancel">×</button>
+          </form>
+        )}
+
+        {tasks.length === 0 && !showQuickAdd && (
           <div className="task-list-empty">
             <div className="empty-icon">🦝</div>
             <h3>Ready to focus?</h3>
@@ -187,15 +207,12 @@ export default function HomeView({
           />
         ))}
 
-        {incompleteTasks.length > 1 && (
-          <button className="random-pick-btn" onClick={pickRandom}>
-            🎲 Pick one for me
-          </button>
-        )}
-
         {completedTasks.length > 0 && (
           <>
-            <div className="tasks-section-label">Completed · {completedTasks.length}</div>
+            <div className="tasks-section-label">
+              <span>Completed · {completedTasks.length}</span>
+              <button className="clear-completed-btn" onClick={clearCompleted}>Clear</button>
+            </div>
             {completedTasks.map(task => (
               <TaskItem key={task.id} task={task} isActive={false} elapsed={0}
                 timerState={timerState} isDragOver={false}
@@ -208,6 +225,55 @@ export default function HomeView({
           </>
         )}
       </div>
+
+      {/* ── Emoji theme sheet ─────────────────────────────────── */}
+      {showEmojiSheet && (
+        <div className="modal-overlay" onClick={() => setShowEmojiSheet(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div className="modal-title">Emoji Theme</div>
+            <div className="theme-list">
+              {EMOJI_THEMES.map(theme => (
+                <button key={theme.id} className="theme-list-item" onClick={() => {
+                  onEmojiTheme(theme.id)
+                  setShowEmojiSheet(false)
+                }}>
+                  <span className="theme-item-preview">{theme.preview}</span>
+                  <span className="theme-item-name">{theme.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Color theme sheet ─────────────────────────────────── */}
+      {showColorSheet && (
+        <div className="modal-overlay" onClick={() => setShowColorSheet(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div className="modal-title">Color Theme</div>
+            <div className="theme-list">
+              {COLOR_THEMES.map(theme => (
+                <button key={theme.id} className="theme-list-item" onClick={() => {
+                  onColorTheme(theme.id)
+                  setShowColorSheet(false)
+                }}>
+                  <span className="theme-color-dots">
+                    {theme.colors
+                      ? theme.colors.slice(0, 5).map((c, i) => (
+                          <span key={i} className="theme-color-dot" style={{ background: TASK_COLORS[c]?.bg }} />
+                        ))
+                      : <span className="theme-color-dot theme-color-dot--star">✨</span>
+                    }
+                  </span>
+                  <span className="theme-item-name">{theme.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
