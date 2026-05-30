@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
-import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme } from './utils/taskUtils'
+import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme, getAutoEmoji } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
-import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound } from './utils/audioUtils'
+import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape } from './utils/audioUtils'
 import { launchConfetti } from './utils/confetti'
+import { haptic } from './utils/haptic'
 import Header from './components/Header'
 import TabBar from './components/TabBar'
 import HomeView from './components/HomeView'
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS = {
   soundscapeVolume: 0.5,
   confettiEnabled: true,
   completionSound: 'tada',
+  defaultMinutes: 25,
 }
 
 const EMPTY_TIMER = {
@@ -29,7 +31,7 @@ const EMPTY_TIMER = {
 
 export default function App() {
   const today = getTodayDate()
-  useWakeLock()
+  useWakeLock(timerState.isRunning)
 
   const [tasks, setTasks] = useLocalStorage(`ft_tasks_${today}`, [])
   const [timerState, setTimerState] = useLocalStorage('ft_timer', EMPTY_TIMER)
@@ -47,10 +49,63 @@ export default function App() {
   const [quickInput, setQuickInput] = useState('')
   const quickInputRef = useRef(null)
 
-  const intervalRef = useRef(null)
-  const chimeCountRef = useRef(0)
-  const nagRef = useRef(null)
+  const intervalRef     = useRef(null)
+  const chimeCountRef   = useRef(0)
+  const nagRef          = useRef(null)
   const sessionStartRef = useRef(null)
+  const notifGranted    = useRef(false)
+  const prevRemaining   = useRef(null)
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e) {
+      // Space = play/pause (ignore when typing in an input or textarea)
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        if (timerState.activeTaskId) toggleTimer()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [timerState.activeTaskId, toggleTimer])
+
+  // ── Midnight date rollover ───────────────────────────────────────────────
+  useEffect(() => {
+    function checkDate() {
+      if (document.visibilityState === 'visible' && getTodayDate() !== today) {
+        window.location.reload()
+      }
+    }
+    document.addEventListener('visibilitychange', checkDate)
+    return () => document.removeEventListener('visibilitychange', checkDate)
+  }, [today])
+
+  // ── Roll-over: check previous days for incomplete tasks ──────────────────
+  const [rolloverTasks, setRolloverTasks] = useState(null)
+  useEffect(() => {
+    if (tasks.length > 0) { setRolloverTasks([]); return }
+    for (let d = 1; d <= 7; d++) {
+      const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
+      try {
+        const stored = JSON.parse(localStorage.getItem(`ft_tasks_${date}`) || '[]')
+        const incomplete = stored.filter(t => !t.completed)
+        if (incomplete.length > 0) { setRolloverTasks(incomplete); return }
+      } catch {}
+    }
+    setRolloverTasks([])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Notification permission ───────────────────────────────────────────────
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      notifGranted.current = true
+    }
+  }, [])
+
+  function requestNotifPermission() {
+    if (!('Notification' in window) || Notification.permission !== 'default') return
+    Notification.requestPermission().then(p => { notifGranted.current = p === 'granted' }).catch(() => {})
+  }
 
   // ── Elapsed ticker ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -90,23 +145,50 @@ export default function App() {
     if (!activeTask || !timerState.isRunning) {
       setFlashOvertime(false)
       clearInterval(nagRef.current)
+      nagRef.current = null
       return
     }
     const remaining = activeTask.durationMinutes * 60 - elapsed
     if (remaining < 0) {
       if (settings.alarmType === 'visual') setFlashOvertime(true)
+      else setFlashOvertime(false)
       if (settings.alarmType === 'continuous' && Math.abs(remaining) % 3 === 0) playAlarmBell()
-      if (settings.alarmType === 'nag' && !nagRef.current) {
-        nagRef.current = setInterval(() => playAlarmBell(), 60000)
-        playAlarmBell()
+      if (settings.alarmType === 'nag') {
+        if (!nagRef.current) {
+          nagRef.current = setInterval(() => playAlarmBell(), 60000)
+          playAlarmBell()
+        }
+      } else {
+        // switched away from nag while overtime — stop any running nag
+        clearInterval(nagRef.current)
+        nagRef.current = null
       }
     } else {
       setFlashOvertime(false)
       clearInterval(nagRef.current)
       nagRef.current = null
     }
-    return () => clearInterval(nagRef.current)
+    // No cleanup return — interval is managed inline above to prevent
+    // the nag from being cleared every time elapsed ticks.
   }, [elapsed, activeTask, timerState.isRunning, settings.alarmType])
+  // Unmount safety: clear any lingering nag interval
+  useEffect(() => () => { clearInterval(nagRef.current) }, [])
+
+  // ── Notification: fire once when active task timer hits 0 ────────────────
+  useEffect(() => {
+    if (!activeTask || !timerState.isRunning) { prevRemaining.current = null; return }
+    const rem = Math.floor(activeTask.durationMinutes * 60 - elapsed)
+    if (prevRemaining.current > 0 && rem <= 0 && notifGranted.current) {
+      try {
+        new Notification(`⏰ Time's up: ${activeTask.emoji} ${activeTask.title}`, {
+          body: 'Tap to get back to your tasks',
+          tag: 'timer-done',
+          renotify: true,
+        })
+      } catch {}
+    }
+    prevRemaining.current = rem
+  }, [elapsed, activeTask, timerState.isRunning])
 
   // ── Soundscape ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -116,7 +198,7 @@ export default function App() {
       stopSoundscape()
     }
     return stopSoundscape
-  }, [settings.soundscape, settings.soundscapeVolume])
+  }, [settings.soundscape]) // volume changes are handled directly by SettingsView via setSoundscapeVolume()
 
   // ── Timer controls ───────────────────────────────────────────────────────
 
@@ -159,12 +241,14 @@ export default function App() {
   }, [setTimerState])
 
   const resumeTimer = useCallback(() => {
-    // Set session start the first time this task actually runs
     if (!sessionStartRef.current) sessionStartRef.current = Date.now()
+    requestNotifPermission()
+    resumeSoundscape()   // unblock autoplay-gated HTML5 audio on first gesture
     setTimerState(prev => ({ ...prev, startTimestamp: Date.now(), isRunning: true }))
-  }, [setTimerState])
+  }, [setTimerState]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTimer = useCallback(() => {
+    haptic(10)
     if (timerState.isRunning) pauseTimer()
     else if (timerState.activeTaskId) resumeTimer()
   }, [timerState.isRunning, timerState.activeTaskId, pauseTimer, resumeTimer])
@@ -174,17 +258,18 @@ export default function App() {
       const live = prev.isRunning && prev.startTimestamp
         ? Math.floor((Date.now() - prev.startTimestamp) / 1000)
         : 0
-      const newAccum = Math.max(0, prev.accumulatedSeconds + live + deltaSeconds)
+      const newAccum = prev.accumulatedSeconds + live + deltaSeconds
       return { ...prev, accumulatedSeconds: newAccum, startTimestamp: prev.isRunning ? Date.now() : prev.startTimestamp }
     })
   }, [setTimerState])
 
   const completeTask = useCallback((taskId) => {
-    // Record session
+    // Record session (trim entries older than 60 days to keep localStorage lean)
+    const SIXTY_DAYS = 60 * 86400000
     if (sessionStartRef.current) {
       const t = tasks.find(x => x.id === taskId)
       if (t) {
-        setSessions(prev => [...prev, {
+        setSessions(prev => [...prev.filter(s => s.startTime >= Date.now() - SIXTY_DAYS), {
           id: generateId(),
           taskId,
           taskTitle: t.title,
@@ -192,13 +277,13 @@ export default function App() {
           startTime: sessionStartRef.current,
           endTime: Date.now(),
           plannedSeconds: t.durationMinutes * 60,
-          actualSeconds: elapsed,
+          actualSeconds: Math.max(0, elapsed),
         }])
       }
       sessionStartRef.current = null
     }
 
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true, actualSeconds: elapsed } : t))
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true, actualSeconds: Math.max(0, elapsed) } : t))
 
     // Auto-advance: start the next incomplete task immediately
     if (timerState.activeTaskId === taskId) {
@@ -227,8 +312,8 @@ export default function App() {
 
   // ── Task CRUD ────────────────────────────────────────────────────────────
   // addTask: ID generated outside the updater so StrictMode double-invoke is idempotent
-  const addTask = useCallback((input, position = 'bottom') => {
-    const { title, minutes } = parseTaskInput(input)
+  const addTask = useCallback((input, position = 'bottom', defaultMinutes = 25) => {
+    const { title, minutes } = parseTaskInput(input, defaultMinutes)
     const newId = generateId()
     const date = today
     setTasks(prev => {
@@ -237,11 +322,10 @@ export default function App() {
       const task = {
         id: newId,
         title,
-        emoji: '✨',
+        emoji: getAutoEmoji(title),
         color: getNextColor(prev),
         durationMinutes: minutes,
         completed: false,
-        recurring: false,
         date,
         actualSeconds: 0,
       }
@@ -272,14 +356,14 @@ export default function App() {
     if (!incomplete.length) return
     const pick = incomplete[Math.floor(Math.random() * incomplete.length)]
     startTask(pick.id)
-    setActiveTab('timer')
+    setActiveTab('home')
   }, [tasks, startTask])
 
   // ── Presets ──────────────────────────────────────────────────────────────
   const savePreset = useCallback((name) => {
     setTasks(prev => {
-      const presetTasks = prev.filter(t => !t.completed).map(({ title, emoji, color, durationMinutes, recurring }) =>
-        ({ title, emoji, color, durationMinutes, recurring })
+      const presetTasks = prev.filter(t => !t.completed).map(({ title, emoji, color, durationMinutes }) =>
+        ({ title, emoji, color, durationMinutes })
       )
       setPresets(p => [...p.filter(x => x.name !== name), { id: generateId(), name, tasks: presetTasks }])
       return prev
@@ -337,14 +421,33 @@ export default function App() {
     e?.preventDefault()
     const val = quickInput.trim()
     if (!val) return
-    addTask(val)
+    addTask(val, 'bottom', settings.defaultMinutes ?? 25)
     setQuickInput('')
     setShowQuickAdd(false)
   }
 
+  // ── Roll-over handler ────────────────────────────────────────────────────
+  const handleRollover = useCallback(() => {
+    if (!rolloverTasks?.length) return
+    const loaded = rolloverTasks.map(t => ({
+      ...t, id: generateId(), date: today, actualSeconds: 0, completed: false,
+    }))
+    setTasks(prev => {
+      const existingIds = new Set(prev.map(t => t.id))
+      const fresh = loaded.filter(t => !existingIds.has(t.id))
+      return fresh.length ? [...prev, ...fresh] : prev
+    })
+    setRolloverTasks([])
+  }, [rolloverTasks, today, setTasks])
+
   // ── Derived values ───────────────────────────────────────────────────────
   const incompleteTasks = tasks.filter(t => !t.completed)
   const completedTasks = tasks.filter(t => t.completed)
+  // How much focused time has been logged today (completed sessions only)
+  const doneToday = sessions
+    .filter(s => new Date(s.startTime).toISOString().slice(0, 10) === today)
+    .reduce((sum, s) => sum + (s.actualSeconds || 0), 0)
+
   const activeRemainSec = activeTask ? Math.max(0, activeTask.durationMinutes * 60 - elapsed) : 0
   const futureTasksSec = incompleteTasks.filter(t => t.id !== timerState.activeTaskId).reduce((s, t) => s + t.durationMinutes * 60, 0)
   const totalRemainingSeconds = activeRemainSec + futureTasksSec
@@ -366,6 +469,12 @@ export default function App() {
     onSubmitQuickAdd: handleQuickAdd,
     onCancelQuickAdd: () => { setShowQuickAdd(false); setQuickInput('') },
     quickInputRef,
+    // Roll-over
+    rolloverTasks,
+    onRollover: handleRollover,
+    onDismissRollover: () => setRolloverTasks([]),
+    // Stats
+    doneToday,
   }
 
   return (
@@ -376,6 +485,7 @@ export default function App() {
           totalListMinutes={totalListMinutes}
           endTime={endTime}
           hasActiveTasks={incompleteTasks.length > 0}
+          doneToday={doneToday}
         />
 
         <main className={`view-content${activeTab === 'home' ? ' view-home' : ''}`}>
@@ -384,17 +494,38 @@ export default function App() {
           {activeTab === 'settings' && <SettingsView {...shared} />}
         </main>
 
-        {/* FAB — opens inline quick-add at top of task list */}
-        {activeTab === 'home' && (
-          <button
-            className="fab"
-            onClick={handleFab}
-            aria-label={showQuickAdd ? 'Close add task' : 'Open add task'}
-          >
-            {showQuickAdd
-              ? <span style={{ display: 'block', lineHeight: 1, fontSize: 26, fontWeight: 300 }}>×</span>
-              : <span style={{ display: 'block', lineHeight: 1, fontSize: 28 }}>+</span>
-            }
+        {/* Quick-add bottom bar — sits flush above the tab bar */}
+        {activeTab === 'home' && showQuickAdd && (
+          <form className="quick-add-bottom-bar" onSubmit={handleQuickAdd}>
+            <span className="quick-add-emoji-preview">
+              {quickInput.trim() ? getAutoEmoji(quickInput) : '✨'}
+            </span>
+            <input
+              ref={quickInputRef}
+              className="quick-add-bottom-input"
+              placeholder='e.g. "Deep work 45" or "Email"'
+              value={quickInput}
+              onChange={e => setQuickInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd(e) } }}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+              enterKeyHint="done"
+            />
+            <button type="submit" className="quick-add-bottom-submit">Add</button>
+            <button
+              type="button"
+              className="quick-add-bottom-cancel"
+              onClick={() => { setShowQuickAdd(false); setQuickInput('') }}
+              aria-label="Cancel"
+            >×</button>
+          </form>
+        )}
+
+        {/* FAB — hidden while quick-add bar is open */}
+        {activeTab === 'home' && !showQuickAdd && (
+          <button className="fab" onClick={handleFab} aria-label="Add task">
+            <span style={{ display: 'block', lineHeight: 1, fontSize: 28 }}>+</span>
           </button>
         )}
 

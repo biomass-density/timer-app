@@ -4,13 +4,6 @@ import { formatMMSS } from '../utils/timeUtils'
 import TaskItem from './TaskItem'
 
 // ── Schedule helpers ──────────────────────────────────────────────────────────
-function fmtClock(ms) {
-  const d = new Date(ms)
-  const h = d.getHours(), m = d.getMinutes()
-  const ampm = h >= 12 ? 'pm' : 'am'
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
-}
-
 function computeSchedule(incompleteTasks, activeTaskId, elapsed) {
   const nowMs = Date.now()
   const times = []
@@ -18,7 +11,7 @@ function computeSchedule(incompleteTasks, activeTaskId, elapsed) {
   for (const task of incompleteTasks) {
     const durMs = task.durationMinutes * 60 * 1000
     if (task.id === activeTaskId) {
-      const start = nowMs - elapsed * 1000
+      const start = nowMs - Math.max(0, elapsed) * 1000
       const end = start + durMs
       times.push({ start, end })
       cursor = Math.max(nowMs, end)
@@ -30,9 +23,10 @@ function computeSchedule(incompleteTasks, activeTaskId, elapsed) {
   return times
 }
 
-// ── SVG constants — slightly larger viewBox so clock numbers fit ──────────
+// ── SVG constants ─────────────────────────────────────────────────────────────
 const CX = 140, CY = 140, R = 110
 const TICK_OUTER = 118, TICK_MED = 112, TICK_INNER = 107
+const RING_R = 132   // progress ring radius
 
 function polar(angleDeg, r = R) {
   const rad = (angleDeg - 90) * Math.PI / 180
@@ -48,7 +42,16 @@ function pieSlicePath(fractionOfHour) {
   return `M ${CX} ${CY} L ${CX} ${CY - R} A ${R} ${R} 0 ${large} 1 ${end.x} ${end.y} Z`
 }
 
-function ClockFace({ fractionOfHour, fillColor, isOvertime }) {
+function progressArc(fraction) {
+  if (fraction <= 0) return ''
+  const deg = fraction * 360
+  if (deg >= 359.5) return `M ${CX} ${CY - RING_R} A ${RING_R} ${RING_R} 0 1 1 ${CX - 0.01} ${CY - RING_R}`
+  const end = polar(deg, RING_R)
+  const large = deg > 180 ? 1 : 0
+  return `M ${CX} ${CY - RING_R} A ${RING_R} ${RING_R} 0 ${large} 1 ${end.x} ${end.y}`
+}
+
+function ClockFace({ fractionOfHour, fillColor, isOvertime, dayProgress }) {
   const ticks = Array.from({ length: 60 }, (_, i) => {
     const is5 = i % 5 === 0
     const p1 = polar(i * 6, TICK_OUTER)
@@ -62,7 +65,7 @@ function ClockFace({ fractionOfHour, fillColor, isOvertime }) {
   })
 
   const numbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((n, i) => {
-    const pos = polar(i * 30, 128)
+    const pos = polar(i * 30, 121)
     return (
       <text key={n} x={pos.x} y={pos.y}
         textAnchor="middle" dominantBaseline="middle"
@@ -71,8 +74,16 @@ function ClockFace({ fractionOfHour, fillColor, isOvertime }) {
     )
   })
 
+  const arc = progressArc(dayProgress)
+
   return (
     <svg className="pie-svg" viewBox="0 0 280 280">
+      {/* Day-progress ring */}
+      <circle cx={CX} cy={CY} r={RING_R} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="2.5" />
+      {arc && (
+        <path d={arc} fill="none" stroke="#27AE60" strokeWidth="3"
+          strokeLinecap="round" opacity="0.8" />
+      )}
       <circle cx={CX} cy={CY} r={R} fill="#F5F6FA" />
       {ticks}
       {numbers}
@@ -95,6 +106,7 @@ export default function HomeView({
   deleteTask, moveToTop, updateTask, reorderTasks,
   onEmojiTheme, onColorTheme, resetTask, clearCompleted,
   showQuickAdd, quickInput, setQuickInput, onSubmitQuickAdd, onCancelQuickAdd, quickInputRef,
+  rolloverTasks, onRollover, onDismissRollover,
 }) {
   const [dragOverId, setDragOverId] = useState(null)
   const [showEmojiSheet, setShowEmojiSheet] = useState(false)
@@ -103,14 +115,19 @@ export default function HomeView({
   const touchDragRef = useRef(null)
 
   const plannedSec = activeTask ? activeTask.durationMinutes * 60 : 0
-  const remainSec = activeTask ? plannedSec - elapsed : 0
+  const remainSec  = activeTask ? plannedSec - elapsed : 0
   const isOvertime = remainSec < 0
   const fractionOfHour = activeTask ? Math.max(0, Math.min(remainSec, 3600)) / 3600 : 0
   const color = activeTask ? (TASK_COLORS[activeTask.color] ?? TASK_COLORS.purple) : TASK_COLORS.purple
 
+  // Day-progress ring: fraction of today's planned minutes that are done
+  const totalMinutes     = tasks.reduce((s, t) => s + t.durationMinutes, 0)
+  const completedMinutes = completedTasks.reduce((s, t) => s + t.durationMinutes, 0)
+  const dayProgress = totalMinutes > 0 ? completedMinutes / totalMinutes : 0
+
   // Drag handlers
   function onDragStart(e, id) { draggedId.current = id; e.dataTransfer.effectAllowed = 'move' }
-  function onDragOver(e, id) { e.preventDefault(); if (id !== draggedId.current) setDragOverId(id) }
+  function onDragOver(e, id)  { e.preventDefault(); if (id !== draggedId.current) setDragOverId(id) }
   function onDrop(id) {
     const from = draggedId.current
     if (!from || from === id) { cleanup(); return }
@@ -121,7 +138,7 @@ export default function HomeView({
     cleanup()
   }
   function onDragEnd() { cleanup() }
-  function cleanup() { draggedId.current = null; setDragOverId(null) }
+  function cleanup()   { draggedId.current = null; setDragOverId(null) }
   function onTouchStart(e, id) { e.preventDefault(); touchDragRef.current = { taskId: id, lastOverId: null } }
   function onTouchMove(e) {
     if (!touchDragRef.current) return
@@ -147,15 +164,14 @@ export default function HomeView({
   return (
     <div className="home-view">
 
-      {/* ── Pie header — always visible ───────────────────────── */}
+      {/* ── Pie header ────────────────────────────────────────────── */}
       <div className="pie-section">
-
-        {/* Clock is always shown; slice appears when a task is active */}
         <div className="pie-wrap">
           <ClockFace
             fractionOfHour={fractionOfHour}
             fillColor={color.bg}
             isOvertime={isOvertime}
+            dayProgress={dayProgress}
           />
           <button
             className="pie-center-btn"
@@ -181,32 +197,33 @@ export default function HomeView({
           <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)} disabled={!activeTask}>+5</button>
         </div>
 
+        {/* Overtime nudge */}
+        {isOvertime && timerState.isRunning && (
+          <div className="overtime-nudge">
+            <button className="overtime-nudge-btn" onClick={() => adjustTime(-5 * 60)}>
+              Running over — add 5 min?
+            </button>
+          </div>
+        )}
+
         <div className="pie-action-pills">
           <button className="pie-action-pill" onClick={() => setShowEmojiSheet(true)}>😊 Emoji Me!</button>
           <button className="pie-action-pill" onClick={() => setShowColorSheet(true)}>🌈 Color Me!</button>
         </div>
       </div>
 
-      {/* ── Scrollable task list ─────────────────────────────── */}
+      {/* ── Scrollable task list ───────────────────────────────────── */}
       <div className="task-list-section">
 
-        {/* Inline quick-add bar — appears at top when FAB is pressed */}
-        {showQuickAdd && (
-          <form className="quick-add-inline" onSubmit={onSubmitQuickAdd}>
-            <input
-              ref={quickInputRef}
-              className="quick-add-inline-input"
-              placeholder='Enter task name and duration'
-              value={quickInput}
-              onChange={e => setQuickInput(e.target.value)}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
-              enterKeyHint="done"
-            />
-            <button type="submit" className="quick-add-inline-submit">Add</button>
-            <button type="button" className="quick-add-inline-cancel" onClick={onCancelQuickAdd} aria-label="Cancel">×</button>
-          </form>
+        {/* Roll-over banner */}
+        {rolloverTasks?.length > 0 && (
+          <div className="rollover-banner">
+            <div className="rollover-banner-text">
+              <strong>{rolloverTasks.length} unfinished task{rolloverTasks.length !== 1 ? 's' : ''}</strong> from yesterday — carry them over?
+            </div>
+            <button className="rollover-btn" onClick={onRollover}>Add</button>
+            <button className="rollover-dismiss" onClick={onDismissRollover} aria-label="Dismiss">×</button>
+          </div>
         )}
 
         {tasks.length === 0 && !showQuickAdd && (
@@ -260,7 +277,7 @@ export default function HomeView({
         )}
       </div>
 
-      {/* ── Emoji theme sheet ─────────────────────────────────── */}
+      {/* ── Emoji theme sheet ─────────────────────────────────────── */}
       {showEmojiSheet && (
         <div className="modal-overlay" onClick={() => setShowEmojiSheet(false)}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>
@@ -281,7 +298,7 @@ export default function HomeView({
         </div>
       )}
 
-      {/* ── Color theme sheet ─────────────────────────────────── */}
+      {/* ── Color theme sheet ─────────────────────────────────────── */}
       {showColorSheet && (
         <div className="modal-overlay" onClick={() => setShowColorSheet(false)}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>

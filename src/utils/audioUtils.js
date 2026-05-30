@@ -10,20 +10,17 @@ export function playChime() {
   try {
     const ac = getCtx()
     const now = ac.currentTime
-    // Three-note ascending bell chord
     [[523.25, 0], [659.25, 0.12], [783.99, 0.24]].forEach(([freq, delay]) => {
       const osc = ac.createOscillator()
       const gain = ac.createGain()
-      osc.connect(gain)
-      gain.connect(ac.destination)
+      osc.connect(gain); gain.connect(ac.destination)
       osc.type = 'sine'
       osc.frequency.value = freq
       const t = now + delay
       gain.gain.setValueAtTime(0, t)
       gain.gain.linearRampToValueAtTime(0.25, t + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8)
-      osc.start(t)
-      osc.stop(t + 1.8)
+      osc.start(t); osc.stop(t + 1.8)
     })
   } catch {}
 }
@@ -35,120 +32,127 @@ export function playAlarmBell() {
     for (let i = 0; i < 4; i++) {
       const osc = ac.createOscillator()
       const gain = ac.createGain()
-      osc.connect(gain)
-      gain.connect(ac.destination)
+      osc.connect(gain); gain.connect(ac.destination)
       osc.type = 'triangle'
       osc.frequency.value = 880
       const t = now + i * 0.35
       gain.gain.setValueAtTime(0.3, t)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
-      osc.start(t)
-      osc.stop(t + 0.3)
+      osc.start(t); osc.stop(t + 0.3)
     }
   } catch {}
 }
 
-// Soundscape state
-let soundNode = null
-let soundGain = null
+// ── Soundscape state ──────────────────────────────────────────────────────────
+// audioEl  → HTML5 Audio for real recordings (rain, café, beach, forest)
+// soundNodes + soundGain → Web Audio for synthesised noise (brown, white)
+let audioEl   = null
+let soundNodes = []
+let soundGain  = null
+
+// Real-recording URLs (CC0, streamed from the Internet Archive)
+const REAL_SOUNDS = {
+  rain:   'https://archive.org/download/rain-sounds-gentle-rain-thunderstorms/soft-rain-ambient-111154.mp3',
+  cafe:   'https://archive.org/download/coffee-shop-sounds-12/Coffee%20Shop%20Sounds%2016.mp3',
+  beach:  'https://archive.org/download/naturesounds-soundtheraphy/Birds%20With%20Ocean%20Waves%20on%20the%20Beach.mp3',
+  forest: 'https://archive.org/download/naturesounds-soundtheraphy/Relaxing%20Nature%20Sounds%20-%20Trickling%20Stream%20Sounds%20%26%20Birds.mp3',
+}
+
+export function stopSoundscape() {
+  // HTML5 audio
+  if (audioEl) {
+    audioEl.pause()
+    audioEl.src = ''
+    audioEl = null
+  }
+  // Synthesised Web Audio
+  soundNodes.forEach(n => { try { n.stop() } catch {} })
+  soundNodes.forEach(n => { try { n.disconnect() } catch {} })
+  soundNodes = []
+  try { soundGain?.disconnect() } catch {}
+  soundGain = null
+}
+
+// Retry playing the soundscape after the first user gesture
+// (browsers block autoplay until the user interacts with the page)
+export function resumeSoundscape() {
+  if (audioEl && audioEl.paused) {
+    audioEl.play().catch(() => {})
+  }
+}
+
+function makeNoiseBuf(ac, seconds = 4) {
+  const len = ac.sampleRate * seconds
+  const buf = ac.createBuffer(2, len, ac.sampleRate)
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1
+  }
+  return buf
+}
+
+function makeBrownBuf(ac, coeff = 0.02, gain = 3.5, seconds = 4) {
+  const len = ac.sampleRate * seconds
+  const buf = ac.createBuffer(2, len, ac.sampleRate)
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch)
+    let last = 0
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1
+      last = (last + coeff * w) / (1 + coeff)
+      d[i] = last * gain
+    }
+  }
+  return buf
+}
 
 export function startSoundscape(type, volume = 0.4) {
   stopSoundscape()
+
+  // ── Real recording ───────────────────────────────────────────────────────
+  const url = REAL_SOUNDS[type]
+  if (url) {
+    audioEl = new Audio(url)
+    audioEl.loop   = true
+    audioEl.volume = Math.min(1, volume)
+    // Suppress autoplay-policy rejections — resumeSoundscape() retries on interaction
+    audioEl.play().catch(() => {})
+    return
+  }
+
+  // ── Synthesised: brown noise ──────────────────────────────────────────────
   try {
     const ac = getCtx()
     soundGain = ac.createGain()
     soundGain.gain.value = volume
     soundGain.connect(ac.destination)
 
-    const bufLen = ac.sampleRate * 4
-    const buf = ac.createBuffer(2, bufLen, ac.sampleRate)
+    if (type === 'brown') {
+      const src = ac.createBufferSource()
+      src.buffer = makeBrownBuf(ac)
+      src.loop = true
+      src.connect(soundGain)
+      src.start()
+      soundNodes.push(src)
 
-    if (type === 'rain') {
-      // Bandpass-filtered noise — sounds like rain
-      for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch)
-        for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1
-      }
-      const src = ac.createBufferSource()
-      src.buffer = buf
-      src.loop = true
-      const filt = ac.createBiquadFilter()
-      filt.type = 'bandpass'
-      filt.frequency.value = 600
-      filt.Q.value = 0.4
-      src.connect(filt)
-      filt.connect(soundGain)
-      src.start()
-      soundNode = src
-    } else if (type === 'brown') {
-      // Brown noise
-      for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch)
-        let last = 0
-        for (let i = 0; i < bufLen; i++) {
-          const w = Math.random() * 2 - 1
-          last = (last + 0.02 * w) / 1.02
-          d[i] = last * 3.5
-        }
-      }
-      const src = ac.createBufferSource()
-      src.buffer = buf
-      src.loop = true
-      src.connect(soundGain)
-      src.start()
-      soundNode = src
     } else if (type === 'white') {
-      for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch)
-        for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1
-      }
       const src = ac.createBufferSource()
-      src.buffer = buf
+      src.buffer = makeNoiseBuf(ac)
       src.loop = true
       src.connect(soundGain)
       src.start()
-      soundNode = src
-    } else if (type === 'cafe') {
-      // Brown noise with a slight high-freq roll-off (warm café murmur)
-      for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch)
-        let last = 0
-        for (let i = 0; i < bufLen; i++) {
-          const w = Math.random() * 2 - 1
-          last = (last + 0.015 * w) / 1.015
-          d[i] = last * 4
-        }
-      }
-      const src = ac.createBufferSource()
-      src.buffer = buf
-      src.loop = true
-      const filt = ac.createBiquadFilter()
-      filt.type = 'lowshelf'
-      filt.frequency.value = 300
-      filt.gain.value = 6
-      src.connect(filt)
-      filt.connect(soundGain)
-      src.start()
-      soundNode = src
+      soundNodes.push(src)
     }
   } catch {}
 }
 
-export function stopSoundscape() {
-  try { soundNode?.stop() } catch {}
-  try { soundNode?.disconnect() } catch {}
-  try { soundGain?.disconnect() } catch {}
-  soundNode = null
-  soundGain = null
-}
-
 export function setSoundscapeVolume(vol) {
+  if (audioEl)   audioEl.volume = Math.min(1, vol)
   if (soundGain) soundGain.gain.value = vol
 }
 
 // ── Completion sounds ─────────────────────────────────────────────────────────
 function playTada(ac) {
-  // Ascending major arpeggio: C4 E4 G4 C5
   [261.63, 329.63, 392, 523.25].forEach((freq, i) => {
     const osc = ac.createOscillator()
     const gain = ac.createGain()
@@ -164,7 +168,6 @@ function playTada(ac) {
 }
 
 function playFanfare(ac) {
-  // Short ascending scale G4→C5→E5→G5, last note held
   [392, 523.25, 659.25, 783.99].forEach((freq, i) => {
     const osc = ac.createOscillator()
     const filt = ac.createBiquadFilter()

@@ -6,9 +6,37 @@ function formatDur(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function fmtDateLabel(dateStr) {
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  if (dateStr === today) return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
 export default function ListView({ tasks, sessions, totalListMinutes, endTime, incompleteTasks }) {
   const completed = tasks.filter(t => t.completed)
   const incomplete = tasks.filter(t => !t.completed)
+
+  // Group sessions from the past 7 days (excluding today — today shown in task tables)
+  const today = new Date().toISOString().slice(0, 10)
+  const cutoff = Date.now() - 7 * 86400000
+  const historySessions = sessions
+    .filter(s => s.startTime >= cutoff && new Date(s.startTime).toISOString().slice(0, 10) !== today)
+    .sort((a, b) => b.startTime - a.startTime)
+
+  // Group by date
+  const historyByDay = []
+  const seen = {}
+  for (const s of historySessions) {
+    const d = new Date(s.startTime).toISOString().slice(0, 10)
+    if (!seen[d]) { seen[d] = []; historyByDay.push({ date: d, sessions: seen[d] }) }
+    seen[d].push(s)
+  }
 
   return (
     <div className="list-view">
@@ -21,12 +49,10 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
               <span className="lv-col-name" />
               <span className="lv-col-set">Set</span>
               <span className="lv-col-spent">Spent</span>
-              <span className="lv-col-pct">%</span>
             </div>
             {completed.map(task => {
               const plannedSec = task.durationMinutes * 60
               const actualSec = task.actualSeconds ?? 0
-              const pct = plannedSec > 0 ? Math.round((actualSec / plannedSec) * 100) : 0
               return (
                 <div key={task.id} className="lv-row">
                   <span className="lv-col-name">
@@ -35,7 +61,6 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
                   </span>
                   <span className="lv-col-set">{formatDur(plannedSec)}</span>
                   <span className="lv-col-spent">{formatDur(actualSec)}</span>
-                  <span className="lv-col-pct">{pct}%</span>
                 </div>
               )
             })}
@@ -57,12 +82,10 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
               <span className="lv-col-name" />
               <span className="lv-col-set">Set</span>
               <span className="lv-col-spent">Spent</span>
-              <span className="lv-col-pct">%</span>
             </div>
             {incomplete.map(task => {
               const plannedSec = task.durationMinutes * 60
               const actualSec = task.actualSeconds ?? 0
-              const pct = plannedSec > 0 ? Math.round((actualSec / plannedSec) * 100) : 0
               return (
                 <div key={task.id} className="lv-row">
                   <span className="lv-col-name">
@@ -71,7 +94,6 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
                   </span>
                   <span className="lv-col-set">{formatDur(plannedSec)}</span>
                   <span className="lv-col-spent">{actualSec > 0 ? formatDur(actualSec) : '—'}</span>
-                  <span className="lv-col-pct">{pct > 0 ? `${pct}%` : '—'}</span>
                 </div>
               )
             })}
@@ -94,6 +116,26 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
           </span>
         </div>
       </div>
+
+      {/* Historical sessions — past 7 days */}
+      {historyByDay.length > 0 && (
+        <div className="lv-card">
+          <h2 className="lv-heading">Past sessions</h2>
+          {historyByDay.map(({ date, sessions: daySessions }) => (
+            <div key={date}>
+              <div className="lv-history-day">{fmtDateLabel(date)}</div>
+              {daySessions.map(s => (
+                <div key={s.id} className="lv-history-row">
+                  <span className="lv-history-emoji">{s.taskEmoji}</span>
+                  <span className="lv-history-title">{s.taskTitle}</span>
+                  <span className="lv-history-dur">{formatDur(s.actualSeconds)}</span>
+                  <span className="lv-history-time">{fmtTime(s.startTime)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { startSoundscape, stopSoundscape, setSoundscapeVolume } from '../utils/audioUtils'
 
 const SOUNDSCAPES = [
-  { value: '',      label: 'None' },
-  { value: 'rain',  label: '🌧️ Rain' },
-  { value: 'cafe',  label: '☕ Café' },
-  { value: 'brown', label: '🟤 Brown noise' },
-  { value: 'white', label: '⬜ White noise' },
+  { value: '',       label: 'None' },
+  { value: 'rain',   label: '🌧️ Rain' },
+  { value: 'cafe',   label: '☕ Café' },
+  { value: 'beach',  label: '🏖️ Beach' },
+  { value: 'forest', label: '🌿 Forest' },
+  { value: 'brown',  label: '🟤 Brown noise' },
+  { value: 'white',  label: '⬜ White noise' },
 ]
 
 const ALARM_TYPES = [
@@ -31,6 +33,17 @@ const CHIME_INTERVALS = [
   { value: 15, label: 'Every 15 min' },
   { value: 20, label: 'Every 20 min' },
   { value: 30, label: 'Every 30 min' },
+]
+
+const DEFAULT_DURATIONS = [
+  { value: 5,  label: '5 min' },
+  { value: 10, label: '10 min' },
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+  { value: 25, label: '25 min (Pomodoro)' },
+  { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
+  { value: 60, label: '60 min' },
 ]
 
 function Toggle({ checked, onChange }) {
@@ -156,6 +169,27 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
             />
           </div>
         )}
+      </div>
+
+      {/* Tasks */}
+      <div className="settings-section-label">Tasks</div>
+      <div className="settings-section">
+        <div className="setting-row">
+          <span className="setting-row-icon">⏱️</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">Default duration</div>
+            <div className="setting-row-desc">Used when no number is typed</div>
+          </div>
+          <select
+            className="setting-select"
+            value={settings.defaultMinutes ?? 25}
+            onChange={e => updateSetting('defaultMinutes', Number(e.target.value))}
+          >
+            {DEFAULT_DURATIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Visuals */}

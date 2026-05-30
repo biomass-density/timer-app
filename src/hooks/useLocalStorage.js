@@ -14,7 +14,7 @@ export function useLocalStorage(key, initialValue) {
     try {
       localStorage.setItem(key, JSON.stringify(value))
     } catch (e) {
-      console.warn('localStorage write failed:', e)
+      if (import.meta.env.DEV) console.warn('localStorage write failed:', e)
     }
   }, [key, value])
 

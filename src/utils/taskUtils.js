@@ -6,7 +6,7 @@ export function getTodayDate() {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function parseTaskInput(raw) {
+export function parseTaskInput(raw, defaultMinutes = 25) {
   const trimmed = raw.trim()
   // Trailing number = minutes: "Write report 45" → title="Write report", minutes=45
   const match = trimmed.match(/^(.+?)\s+(\d{1,3})\s*$/)
@@ -16,7 +16,7 @@ export function parseTaskInput(raw) {
       return { title: match[1].trim(), minutes: mins }
     }
   }
-  return { title: trimmed, minutes: 25 }
+  return { title: trimmed, minutes: defaultMinutes }
 }
 
 export const TASK_COLORS = {

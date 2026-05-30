@@ -12,16 +12,20 @@ export function launchConfetti({ big = false } = {}) {
   const particles = Array.from({ length: count }, () => {
     const isBig = big && Math.random() > 0.6
     return {
-      x: big ? Math.random() * canvas.width : Math.random() * canvas.width * 0.6 + canvas.width * 0.2,
-      y: big ? -20 : canvas.height * 0.3 + Math.random() * canvas.height * 0.2,
+      // Big: rain from top. Small: burst up from bottom-center.
+      x: big
+        ? Math.random() * canvas.width
+        : canvas.width * 0.5 + (Math.random() - 0.5) * canvas.width * 0.5,
+      y: big ? -20 : canvas.height + 10,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       w: Math.random() * (isBig ? 16 : 10) + 4,
       h: Math.random() * (isBig ? 8 : 6) + 3,
-      vx: (Math.random() - 0.5) * (big ? 7 : 5),
-      vy: big ? (Math.random() * 5 + 1) : (Math.random() - 0.5) * 8 - 4,
+      vx: (Math.random() - 0.5) * (big ? 7 : 11),
+      // Big: falls down. Small: shoots upward with arc.
+      vy: big ? (Math.random() * 5 + 1) : -(Math.random() * 18 + 9),
       rot: Math.random() * 360,
       rotV: (Math.random() - 0.5) * 10,
-      gravity: 0.15 + Math.random() * 0.12,
+      gravity: big ? (0.15 + Math.random() * 0.12) : (0.35 + Math.random() * 0.15),
       fade: 0,
     }
   })
@@ -41,9 +45,9 @@ export function launchConfetti({ big = false } = {}) {
       p.vy += p.gravity
       p.vx *= 0.99
       p.rot += p.rotV
-      // Fade out in last 800ms of 3.5s window
       const alpha = elapsed < 2700 ? 1 : Math.max(0, 1 - (elapsed - 2700) / 800)
-      if (p.y < canvas.height + 30 && alpha > 0) {
+      const inBounds = big ? p.y < canvas.height + 30 : p.y > -30
+      if (inBounds && alpha > 0) {
         alive = true
         ctx2d.save()
         ctx2d.globalAlpha = alpha
