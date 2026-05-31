@@ -31,10 +31,10 @@ const EMPTY_TIMER = {
 
 export default function App() {
   const today = getTodayDate()
-  useWakeLock(timerState.isRunning)
 
   const [tasks, setTasks] = useLocalStorage(`ft_tasks_${today}`, [])
   const [timerState, setTimerState] = useLocalStorage('ft_timer', EMPTY_TIMER)
+  useWakeLock(timerState.isRunning)
   const [_rawSettings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
   // Always merge stored settings with defaults so new keys (e.g. completionSound) are never undefined
   const settings = { ...DEFAULT_SETTINGS, ..._rawSettings }
@@ -55,19 +55,6 @@ export default function App() {
   const sessionStartRef = useRef(null)
   const notifGranted    = useRef(false)
   const prevRemaining   = useRef(null)
-
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────
-  useEffect(() => {
-    function onKey(e) {
-      // Space = play/pause (ignore when typing in an input or textarea)
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault()
-        if (timerState.activeTaskId) toggleTimer()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [timerState.activeTaskId, toggleTimer])
 
   // ── Midnight date rollover ───────────────────────────────────────────────
   useEffect(() => {
@@ -252,6 +239,19 @@ export default function App() {
     if (timerState.isRunning) pauseTimer()
     else if (timerState.activeTaskId) resumeTimer()
   }, [timerState.isRunning, timerState.activeTaskId, pauseTimer, resumeTimer])
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e) {
+      // Space = play/pause (ignore when typing in an input or textarea)
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        if (timerState.activeTaskId) toggleTimer()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [timerState.activeTaskId, toggleTimer])
 
   const adjustTime = useCallback((deltaSeconds) => {
     setTimerState(prev => {

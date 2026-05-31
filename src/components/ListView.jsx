@@ -10,9 +10,19 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
+// Returns YYYY-MM-DD in the user's local timezone (toISOString() uses UTC and
+// causes sessions near midnight to appear under the wrong calendar day).
+function localDateStr(ts) {
+  const d = new Date(ts)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function fmtDateLabel(dateStr) {
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const today = localDateStr(Date.now())
+  const yesterday = localDateStr(Date.now() - 86400000)
   if (dateStr === today) return 'Today'
   if (dateStr === yesterday) return 'Yesterday'
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
@@ -23,17 +33,17 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
   const incomplete = tasks.filter(t => !t.completed)
 
   // Group sessions from the past 7 days (excluding today — today shown in task tables)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateStr(Date.now())
   const cutoff = Date.now() - 7 * 86400000
   const historySessions = sessions
-    .filter(s => s.startTime >= cutoff && new Date(s.startTime).toISOString().slice(0, 10) !== today)
+    .filter(s => s.startTime >= cutoff && localDateStr(s.startTime) !== today)
     .sort((a, b) => b.startTime - a.startTime)
 
   // Group by date
   const historyByDay = []
   const seen = {}
   for (const s of historySessions) {
-    const d = new Date(s.startTime).toISOString().slice(0, 10)
+    const d = localDateStr(s.startTime)
     if (!seen[d]) { seen[d] = []; historyByDay.push({ date: d, sessions: seen[d] }) }
     seen[d].push(s)
   }

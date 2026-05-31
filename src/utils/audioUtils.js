@@ -1,6 +1,8 @@
 let ctx = null
 
 function getCtx() {
+  // Recreate if closed — iOS Safari closes the context when the tab is backgrounded
+  if (ctx?.state === 'closed') ctx = null
   if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)()
   if (ctx.state === 'suspended') ctx.resume()
   return ctx

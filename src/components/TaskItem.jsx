@@ -27,6 +27,9 @@ export default function TaskItem({
   const longPressTimer                  = useRef(null)
   const editTitleRef                    = useRef(null)
 
+  // Clear the long-press timer if the card unmounts mid-press (e.g. task deleted by swipe)
+  useEffect(() => () => clearTimeout(longPressTimer.current), [])
+
   const color = TASK_COLORS[task.color] ?? TASK_COLORS.purple
   const plannedSec  = task.durationMinutes * 60
   const displaySec  = isActive ? plannedSec - elapsed : plannedSec
@@ -125,6 +128,7 @@ export default function TaskItem({
       onTouchStart={onCardTouchStart}
       onTouchMove={onCardTouchMove}
       onTouchEnd={onCardTouchEnd}
+      onTouchCancel={onCardTouchEnd}
     >
       {/* ── Edit mode ── */}
       {editing ? (

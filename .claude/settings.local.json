@@ -8,7 +8,9 @@
       "Bash(curl -s http://localhost:3000/src/App.jsx)",
       "WebFetch(domain:signaturesounds.org)",
       "WebFetch(domain:archive.org)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(curl -s http://localhost:5174/)",
+      "Bash(pkill -f \"vite.*5174\\\\|vite.*49461\")"
     ]
   }
 }
