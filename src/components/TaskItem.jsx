@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TASK_COLORS } from '../utils/taskUtils'
 import { formatMMSS, formatDuration } from '../utils/timeUtils'
 import { haptic } from '../utils/haptic'
