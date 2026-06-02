@@ -28,7 +28,7 @@ function fmtDateLabel(dateStr) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-export default function ListView({ tasks, sessions, totalListMinutes, endTime, incompleteTasks }) {
+export default function ListView({ tasks, sessions, totalListMinutes, endTime, incompleteTasks, timerState, elapsed }) {
   const completed = tasks.filter(t => t.completed)
   const incomplete = tasks.filter(t => !t.completed)
 
@@ -95,7 +95,9 @@ export default function ListView({ tasks, sessions, totalListMinutes, endTime, i
             </div>
             {incomplete.map(task => {
               const plannedSec = task.durationMinutes * 60
-              const actualSec = task.actualSeconds ?? 0
+              const isActive = task.id === timerState?.activeTaskId
+              // Show live elapsed for the active task; fall back to saved actualSeconds
+              const actualSec = isActive ? Math.max(0, elapsed ?? 0) : (task.actualSeconds ?? 0)
               return (
                 <div key={task.id} className="lv-row">
                   <span className="lv-col-name">
