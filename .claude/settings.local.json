@@ -13,7 +13,12 @@
       "Bash(pkill -f \"vite.*5174\\\\|vite.*49461\")",
       "Bash(node -e ' *)",
       "Bash(git add *)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s http://localhost:56226/api/config)",
+      "Bash(curl -s -X POST http://localhost:56226/api/emoji -H 'Content-Type: application/json' -d '{\"title\":\"dentist appointment\"}')",
+      "Bash(curl -s http://localhost:56226/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:56226/api/emoji)"
     ]
   }
 }

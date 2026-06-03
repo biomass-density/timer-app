@@ -1,0 +1,13 @@
+# Secrets — never commit your API key
+.env
+.env.local
+.env.*.local
+
+# Vite's transient dependency cache (regenerated on every build)
+node_modules/.vite/
+
+# Logs
+*.log
+
+# OS
+.DS_Store

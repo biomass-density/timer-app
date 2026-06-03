@@ -21,8 +21,7 @@ const DEFAULT_SETTINGS = {
   confettiEnabled: true,
   completionSound: 'tada',
   defaultMinutes: 25,
-  aiEmoji: false,
-  geminiApiKey: '',
+  aiEmoji: true, // contextual emoji via the backend; harmlessly off if the server has no key
 }
 
 const EMPTY_TIMER = {
@@ -318,13 +317,13 @@ export default function App() {
   // Upgrade a task's emoji with a contextual AI pick (no-op without a key).
   // The heuristic emoji is already set, so this just refines it in place.
   const refineEmojiAI = useCallback((taskId, title) => {
-    if (!settings.aiEmoji || !settings.geminiApiKey) return
-    suggestEmojiAI(title, settings.geminiApiKey)
+    if (!settings.aiEmoji) return
+    suggestEmojiAI(title)
       .then(emoji => {
         if (emoji) setTasks(prev => prev.map(t => t.id === taskId ? { ...t, emoji } : t))
       })
-      .catch(() => {}) // network/API error → keep the offline guess
-  }, [settings.aiEmoji, settings.geminiApiKey, setTasks])
+      .catch(() => {}) // network/server error → keep the offline guess
+  }, [settings.aiEmoji, setTasks])
 
   // addTask: ID generated outside the updater so StrictMode double-invoke is idempotent
   const addTask = useCallback((input, position = 'bottom', defaultMinutes = 25) => {
@@ -421,9 +420,9 @@ export default function App() {
     // Instant heuristic pass first…
     setTasks(prev => applyEmojiTheme(prev, themeId))
     // …then, for "Match tasks!", let AI refine each title contextually.
-    if (themeId === 'auto' && settings.aiEmoji && settings.geminiApiKey) {
+    if (themeId === 'auto' && settings.aiEmoji) {
       Promise.all(tasks.map(t =>
-        suggestEmojiAI(t.title, settings.geminiApiKey)
+        suggestEmojiAI(t.title)
           .then(emoji => ({ id: t.id, emoji }))
           .catch(() => ({ id: t.id, emoji: null }))
       )).then(results => {
@@ -431,7 +430,7 @@ export default function App() {
         setTasks(prev => prev.map(t => byId.get(t.id) ? { ...t, emoji: byId.get(t.id) } : t))
       })
     }
-  }, [setTasks, tasks, settings.aiEmoji, settings.geminiApiKey])
+  }, [setTasks, tasks, settings.aiEmoji])
 
   const onColorTheme = useCallback((themeId) => {
     setTasks(prev => applyColorTheme(prev, themeId))
