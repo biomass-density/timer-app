@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { startSoundscape, stopSoundscape, setSoundscapeVolume } from '../utils/audioUtils'
-import { aiAvailable } from '../utils/aiEmoji'
 
 const SOUNDSCAPES = [
   { value: '',       label: 'None' },
@@ -59,13 +58,6 @@ function Toggle({ checked, onChange }) {
 
 export default function SettingsView({ settings, setSettings, presets, savePreset, loadPreset, deletePreset, tasks }) {
   const [presetName, setPresetName] = useState('')
-  const [aiReady, setAiReady] = useState(null) // null = checking, true/false = server status
-
-  useEffect(() => {
-    let alive = true
-    aiAvailable().then(ok => { if (alive) setAiReady(ok) })
-    return () => { alive = false }
-  }, [])
 
   function updateSetting(key, value) {
     setSettings(prev => ({ ...prev, [key]: value }))
@@ -214,20 +206,6 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
             onChange={v => updateSetting('aiEmoji', v)}
           />
         </div>
-
-        {settings.aiEmoji && (
-          <div className="setting-row">
-            <span className="setting-row-icon">{aiReady === false ? '⚠️' : '🔌'}</span>
-            <div className="setting-row-info">
-              <div className="setting-row-label">Server status</div>
-              <div className="setting-row-desc">
-                {aiReady === null && 'Checking…'}
-                {aiReady === true && 'Connected — Gemini key found on the server'}
-                {aiReady === false && 'No Gemini key found on the server. Tasks use offline matching until one is set.'}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Visuals */}

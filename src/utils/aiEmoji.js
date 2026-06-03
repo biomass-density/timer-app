@@ -39,15 +39,3 @@ export function suggestEmojiAI(title) {
   inflight.set(key, p)
   return p
 }
-
-// Whether the server has a Gemini key configured (for the settings status line).
-export async function aiAvailable() {
-  try {
-    const res = await fetch('/api/config')
-    if (!res.ok) return false
-    const { aiAvailable } = await res.json()
-    return !!aiAvailable
-  } catch {
-    return false
-  }
-}
