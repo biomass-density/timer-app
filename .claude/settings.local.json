@@ -23,7 +23,10 @@
       "Bash(git commit *)",
       "Bash(curl -s http://localhost:56553/api/config)",
       "Bash(curl -s -X POST http://localhost:56553/api/emoji -H 'Content-Type: application/json' -d '{\"title\":\"walk the dog\"}')",
-      "Bash(curl -s http://localhost:56553/)"
+      "Bash(curl -s http://localhost:56553/)",
+      "Bash(git push *)",
+      "Bash(curl -s -m 15 https://timer-app-agk.pages.dev/api/config)",
+      "Bash(curl -s -m 15 -o /dev/null -w \"%{http_code}\\\\n\" https://timer-app-agk.pages.dev/api/config)"
     ]
   }
 }
