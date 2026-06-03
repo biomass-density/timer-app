@@ -1,9 +1,16 @@
 import { useState } from 'react'
-import { TASK_COLORS, COLOR_KEYS, DEFAULT_EMOJIS } from '../utils/taskUtils'
+import { TASK_COLORS, COLOR_KEYS, EMOJI_CATEGORIES } from '../utils/taskUtils'
+
+// Open on the tab that already contains the task's current emoji (fall back to Popular)
+function initialCategory(emoji) {
+  const idx = EMOJI_CATEGORIES.findIndex(c => c.emojis.includes(emoji))
+  return idx >= 0 ? idx : 0
+}
 
 export default function EmojiColorPicker({ task, onUpdate, onClose }) {
   const [emoji, setEmoji] = useState(task.emoji)
   const [color, setColor] = useState(task.color)
+  const [cat, setCat] = useState(() => initialCategory(task.emoji))
 
   function handleDone() {
     onUpdate({ emoji, color })
@@ -30,10 +37,23 @@ export default function EmojiColorPicker({ task, onUpdate, onClose }) {
         </div>
 
         <div className="modal-section-label">Emoji</div>
-        <div className="emoji-grid">
-          {DEFAULT_EMOJIS.map(e => (
+        <div className="emoji-cat-tabs">
+          {EMOJI_CATEGORIES.map((c, i) => (
             <button
-              key={e}
+              key={c.name}
+              className={`emoji-cat-tab${cat === i ? ' selected' : ''}`}
+              onClick={() => setCat(i)}
+              title={c.name}
+              aria-label={c.name}
+            >
+              {c.icon}
+            </button>
+          ))}
+        </div>
+        <div className="emoji-grid">
+          {EMOJI_CATEGORIES[cat].emojis.map((e, i) => (
+            <button
+              key={`${e}-${i}`}
               className={`emoji-btn${emoji === e ? ' selected' : ''}`}
               onClick={() => setEmoji(e)}
             >

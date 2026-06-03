@@ -10,7 +10,8 @@
       "WebFetch(domain:archive.org)",
       "WebSearch",
       "Bash(curl -s http://localhost:5174/)",
-      "Bash(pkill -f \"vite.*5174\\\\|vite.*49461\")"
+      "Bash(pkill -f \"vite.*5174\\\\|vite.*49461\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

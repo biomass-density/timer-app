@@ -8,11 +8,27 @@ function getCtx() {
   return ctx
 }
 
+// Call from a user gesture (e.g. tapping play). iOS keeps the AudioContext
+// muted until a sound is started inside a real interaction, so chimes that
+// later fire from a setInterval tick would otherwise be silent.
+export function unlockAudio() {
+  try {
+    const ac = getCtx()
+    const osc = ac.createOscillator()
+    const gain = ac.createGain()
+    gain.gain.value = 0.0001 // effectively silent
+    osc.connect(gain); gain.connect(ac.destination)
+    osc.start()
+    osc.stop(ac.currentTime + 0.01)
+  } catch {}
+}
+
 export function playChime() {
   try {
     const ac = getCtx()
     const now = ac.currentTime
-    [[523.25, 0], [659.25, 0.12], [783.99, 0.24]].forEach(([freq, delay]) => {
+    const notes = [[523.25, 0], [659.25, 0.12], [783.99, 0.24]]
+    notes.forEach(([freq, delay]) => {
       const osc = ac.createOscillator()
       const gain = ac.createGain()
       osc.connect(gain); gain.connect(ac.destination)

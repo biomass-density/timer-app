@@ -3,7 +3,7 @@ import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
 import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme, getAutoEmoji } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
-import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape } from './utils/audioUtils'
+import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape, unlockAudio } from './utils/audioUtils'
 import { launchConfetti } from './utils/confetti'
 import { haptic } from './utils/haptic'
 import Header from './components/Header'
@@ -34,7 +34,7 @@ export default function App() {
 
   const [tasks, setTasks] = useLocalStorage(`ft_tasks_${today}`, [])
   const [timerState, setTimerState] = useLocalStorage('ft_timer', EMPTY_TIMER)
-  useWakeLock(timerState.isRunning)
+  useWakeLock(true) // keep the screen awake the whole time the app is open
   const [_rawSettings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
   // Always merge stored settings with defaults so new keys (e.g. completionSound) are never undefined
   const settings = { ...DEFAULT_SETTINGS, ..._rawSettings }
@@ -230,6 +230,7 @@ export default function App() {
   const resumeTimer = useCallback(() => {
     if (!sessionStartRef.current) sessionStartRef.current = Date.now()
     requestNotifPermission()
+    unlockAudio()        // unlock Web Audio (chimes/bells) on first gesture — required on iOS
     resumeSoundscape()   // unblock autoplay-gated HTML5 audio on first gesture
     setTimerState(prev => ({ ...prev, startTimestamp: Date.now(), isRunning: true }))
   }, [setTimerState]) // eslint-disable-line react-hooks/exhaustive-deps
