@@ -138,46 +138,177 @@ export function formatToday() {
   })
 }
 
-const EMOJI_RULES = [
-  { keys: ['email', 'inbox', 'reply', 'message', 'mail'], emoji: '📧' },
-  { keys: ['meeting', 'standup', 'sync', 'retro', 'sprint'], emoji: '📅' },
-  { keys: ['call', 'zoom', 'phone', 'ring', 'video'], emoji: '📞' },
-  // cooking/food — must come before generic "meal" words
-  { keys: ['cook', 'bake', 'recipe', 'chef', 'grill', 'roast', 'fry', 'boil', 'prep meal', 'prep dinner', 'prep lunch'], emoji: '🍳' },
-  { keys: ['lunch', 'dinner', 'breakfast', 'eat', 'food', 'meal', 'snack', 'coffee', 'tea', 'groceries'], emoji: '🍽️' },
-  // gardening/plants — checked BEFORE 'planning' so "water plants" / "plant seeds" match here
-  { keys: ['water plant', 'garden', 'plant', 'flower', 'weed', 'pot soil', 'compost', 'prune', 'trim tree', 'water the'], emoji: '🪴' },
-  { keys: ['run', 'running', 'jog', 'exercise', 'gym', 'workout', 'yoga', 'stretch', 'hike', 'swim', 'bike', 'cycling'], emoji: '🏃' },
-  { keys: ['walk', 'stroll'], emoji: '🚶' },
-  { keys: ['write', 'writing', 'blog', 'report', 'essay', 'draft', 'article', 'newsletter', 'journal'], emoji: '✍️' },
-  { keys: ['code', 'coding', 'dev', 'develop', 'debug', 'build', 'deploy', 'script', 'programming'], emoji: '💻' },
-  { keys: ['read', 'reading', 'book', 'study', 'studying', 'learn', 'research', 'docs'], emoji: '📚' },
-  { keys: ['review', 'pr ', 'feedback', 'qa ', 'test', 'audit'], emoji: '🔍' },
-  { keys: ['design', 'figma', 'ui ', 'ux ', 'sketch', 'mockup', 'prototype', 'wireframe'], emoji: '🎨' },
-  // planning — 'plan' checked with a word boundary so "plant" won't match
-  { keys: ['planning', 'strategy', 'goals', 'roadmap', 'agenda', 'plan '], emoji: '🗺️' },
-  { keys: ['music', 'guitar', 'piano', 'sing', 'instrument', 'record', 'podcast'], emoji: '🎵' },
-  { keys: ['shop', 'shopping', 'buy ', 'order', 'purchase'], emoji: '🛒' },
-  { keys: ['clean', 'cleaning', 'laundry', 'dishes', 'vacuum', 'tidy', 'organise', 'organize', 'declutter'], emoji: '🧹' },
-  { keys: ['social', 'twitter', 'instagram', 'linkedin', 'post', 'content'], emoji: '📱' },
-  { keys: ['data', 'analyse', 'analyze', 'analytics', 'metrics', 'stats'], emoji: '📊' },
-  { keys: ['break', 'relax', 'rest', 'chill', 'nap', 'meditat'], emoji: '☕' },
-  { keys: ['finance', 'budget', 'invoice', 'payment', 'accounting', 'tax', 'billing'], emoji: '💰' },
-  { keys: ['present', 'presentation', 'slides', 'pitch', 'demo', 'talk'], emoji: '🎤' },
-  { keys: ['travel', 'flight', 'pack', 'trip', 'commute'], emoji: '✈️' },
-  { keys: ['call', 'doctor', 'dentist', 'appointment', 'hospital'], emoji: '🏥' },
-  { keys: ['pet', 'dog', 'cat', 'feed the', 'walk the dog'], emoji: '🐾' },
-  { keys: ['paint', 'draw', 'art', 'sketch', 'illustrat'], emoji: '🎨' },
+// Multi-word idioms checked first, where the single-word rule below would misfire
+// (e.g. "grocery run" is shopping, not exercise). Matched on whole words.
+const EMOJI_PHRASES = [
+  [['grocery run', 'grocery shop', 'grocery store', 'food shop', 'food run'], '🛒'],
+  [['coffee run'], '☕'],
+  [['beer run', 'wine run', 'liquor run'], '🍷'],
+  [['deep work', 'focus session', 'deep focus', 'focus block'], '🎯'],
+  [['meal prep'], '🍳'],
+  [['stand up', 'stand-up', 'standup meeting'], '📅'],
+  [['one on one', 'one-on-one', '1 on 1', '1:1'], '🤝'],
 ]
+
+// Base word → emoji. getAutoEmoji also tries simple plural / -ing / -ed variants,
+// so "meetings", "running", "emailed" resolve to their base word. Keep generic
+// filler nouns (kitchen, house, stuff…) OUT so the meaningful verb wins instead.
+const EMOJI_WORDS = {
+  // work & productivity
+  work: '💼', job: '💼', office: '🏢', boss: '💼', career: '💼',
+  task: '📋', todo: '📋', checklist: '📋', project: '📊', deadline: '⏰',
+  goal: '🎯', target: '🎯', priority: '⭐', milestone: '🏁',
+  plan: '🗺️', planning: '🗺️', strategy: '🧭', roadmap: '🗺️', agenda: '📋',
+  meeting: '📅', meet: '📅', standup: '📅', sync: '🔄', retro: '📅',
+  sprint: '🏁', kickoff: '🏁', review: '🔍', feedback: '💬', audit: '🔍',
+  report: '📊', summary: '📝', recap: '📝',
+  email: '📧', inbox: '📧', mail: '📧', reply: '📧', message: '💬',
+  dm: '💬', slack: '💬', call: '📞', phone: '📞', zoom: '📹',
+  interview: '🤝', onboarding: '🤝', presentation: '🎤', slides: '📊',
+  deck: '📊', pitch: '🎤', demo: '🖥️', proposal: '📄', document: '📄',
+  doc: '📄', paperwork: '📑', contract: '📜', note: '📝', notes: '📝',
+  admin: '🗂️', organize: '🗂️', research: '🔬', analysis: '📈',
+  analyze: '📈', data: '📊', metrics: '📈', stats: '📈', spreadsheet: '📊',
+
+  // coding & tech
+  code: '💻', coding: '💻', program: '💻', programming: '💻', dev: '💻',
+  develop: '💻', debug: '🐛', bug: '🐛', fix: '🔧', deploy: '🚀',
+  ship: '🚀', release: '🚀', launch: '🚀', build: '🛠️', test: '🧪',
+  refactor: '🔧', api: '🔌', database: '🗄️', server: '🖥️', git: '🔀',
+  merge: '🔀', commit: '💾', pr: '🔍', ticket: '🎫', script: '💻',
+  computer: '💻', laptop: '💻', software: '💻', app: '📱', website: '🌐',
+  web: '🌐', config: '⚙️', setup: '🛠️', install: '⚙️',
+
+  // writing & creative
+  write: '✍️', writing: '✍️', blog: '✍️', article: '📰', essay: '📝',
+  draft: '📝', edit: '✏️', proofread: '🔍', journal: '📔', newsletter: '📰',
+  copy: '✍️', story: '📖', design: '🎨', sketch: '✏️', draw: '🎨',
+  paint: '🎨', illustrate: '🎨', art: '🎨', logo: '🎨', figma: '🎨',
+  mockup: '🎨', wireframe: '📐', prototype: '🧩', ui: '🎨', ux: '🎨',
+  branding: '🎨', photo: '📷', photography: '📷', camera: '📷', video: '🎥',
+  film: '🎬', movie: '🎬', record: '🎙️', podcast: '🎙️', music: '🎵',
+  song: '🎵', guitar: '🎸', piano: '🎹', sing: '🎤', instrument: '🎵',
+
+  // learning
+  read: '📚', reading: '📚', book: '📚', study: '📖', studying: '📖',
+  learn: '🎓', course: '🎓', class: '🎓', lecture: '🎓', homework: '✏️',
+  assignment: '✏️', exam: '📝', quiz: '📝', revise: '📖', flashcards: '🃏',
+  language: '🗣️', school: '🏫', college: '🎓', university: '🎓',
+  lesson: '📖', tutorial: '🎓',
+
+  // fitness & movement
+  run: '🏃', running: '🏃', jog: '🏃', jogging: '🏃', gym: '🏋️',
+  workout: '🏋️', exercise: '💪', lift: '🏋️', weights: '🏋️',
+  training: '🏋️', yoga: '🧘', pilates: '🧘', stretch: '🤸', cardio: '🏃',
+  walk: '🚶', walking: '🚶', stroll: '🚶', swim: '🏊', swimming: '🏊',
+  bike: '🚴', biking: '🚴', cycle: '🚴', cycling: '🚴', hike: '🥾',
+  hiking: '🥾', climb: '🧗', climbing: '🧗', dance: '💃', sport: '⚽',
+  soccer: '⚽', basketball: '🏀', tennis: '🎾', golf: '⛳', boxing: '🥊',
+  marathon: '🏃',
+
+  // health & medical
+  doctor: '🩺', dentist: '🦷', dental: '🦷', appointment: '📅',
+  checkup: '🩺', medicine: '💊', meds: '💊', pill: '💊', vitamins: '💊',
+  prescription: '💊', therapy: '🛋️', therapist: '🛋️', vaccine: '💉',
+  shot: '💉', hospital: '🏥', health: '🩺', mental: '🧠', wellness: '🧘',
+
+  // rest & self-care
+  break: '☕', rest: '😌', relax: '😌', chill: '🛋️', nap: '😴',
+  sleep: '😴', meditate: '🧘', meditation: '🧘', breathe: '🫁',
+  shower: '🚿', bath: '🛁', skincare: '🧴', selfcare: '💆', spa: '💆',
+  haircut: '💇', hair: '💇', nails: '💅', manicure: '💅', massage: '💆',
+
+  // chores & home
+  clean: '🧹', cleaning: '🧹', tidy: '🧹', vacuum: '🧹', mop: '🧽',
+  dust: '🧹', sweep: '🧹', laundry: '🧺', wash: '🧺', dishes: '🍽️',
+  trash: '🗑️', garbage: '🗑️', recycle: '♻️', declutter: '📦',
+  chores: '🧹', repair: '🔧', diy: '🛠️', assemble: '🛠️', garden: '🪴',
+  gardening: '🪴', plant: '🪴', plants: '🪴', flowers: '🌷', weed: '🪴',
+  mow: '🌱', lawn: '🌱', water: '💧', compost: '🪴', iron: '👔', fold: '🧺',
+
+  // cooking & food
+  cook: '🍳', cooking: '🍳', bake: '🍰', baking: '🍰', recipe: '🍳',
+  grill: '🍖', meal: '🍽️', breakfast: '🍳', lunch: '🥪', dinner: '🍽️',
+  brunch: '🥐', snack: '🍎', eat: '🍽️', food: '🍽️', coffee: '☕',
+  tea: '🍵', drink: '🥤', smoothie: '🥤', groceries: '🛒', grocery: '🛒',
+
+  // shopping & errands
+  shop: '🛍️', shopping: '🛍️', buy: '🛒', purchase: '🛒', order: '📦',
+  errand: '🏃', errands: '🏃', pickup: '📦', delivery: '📦', package: '📦',
+  mall: '🛍️', store: '🏬',
+
+  // money & finance
+  pay: '💳', payment: '💳', bill: '🧾', bills: '🧾', rent: '🏠',
+  mortgage: '🏦', bank: '🏦', banking: '🏦', finance: '💰', finances: '💰',
+  money: '💰', save: '💰', savings: '💰', invest: '📈', stocks: '📈',
+  crypto: '🪙', tax: '🧾', taxes: '🧾', accounting: '🧮', expenses: '💳',
+  insurance: '🛡️', salary: '💵', paycheck: '💵', budget: '💰',
+
+  // social, family & events
+  family: '👪', kids: '🧒', kid: '🧒', baby: '👶', parents: '👪',
+  friend: '🤝', friends: '🫂', party: '🎉', birthday: '🎂',
+  anniversary: '💐', wedding: '💒', date: '💕', gift: '🎁', present: '🎁',
+  visit: '🤝', hangout: '🫂', celebrate: '🎉', reunion: '🫂', text: '💬',
+  mom: '📞', dad: '📞',
+
+  // pets
+  pet: '🐾', pets: '🐾', dog: '🐕', cat: '🐈', vet: '🩺', feed: '🍖',
+
+  // travel & transport
+  travel: '✈️', flight: '✈️', fly: '✈️', trip: '🧳', vacation: '🏖️',
+  holiday: '🏖️', pack: '🧳', packing: '🧳', hotel: '🏨', drive: '🚗',
+  driving: '🚗', car: '🚗', gas: '⛽', fuel: '⛽', commute: '🚆',
+  train: '🚆', bus: '🚌', subway: '🚇', airport: '🛫', passport: '🛂',
+  visa: '🛂', taxi: '🚕', parking: '🅿️',
+
+  // social media & content
+  social: '📱', twitter: '🐦', tweet: '🐦', instagram: '📷', insta: '📷',
+  linkedin: '💼', tiktok: '🎵', youtube: '📺', post: '📱', content: '📱',
+  news: '📰', stream: '📺',
+
+  // entertainment & leisure
+  game: '🎮', games: '🎮', gaming: '🎮', play: '🎮', tv: '📺',
+  watch: '📺', netflix: '📺', show: '📺', concert: '🎫', festival: '🎪',
+  museum: '🖼️', hobby: '🎨', puzzle: '🧩', chess: '♟️', cards: '🃏',
+
+  // misc
+  idea: '💡', ideas: '💡', brainstorm: '💡', think: '💭', remember: '📌',
+  remind: '⏰', reminder: '⏰', schedule: '📅', calendar: '📅',
+  backup: '💾', update: '🔄', focus: '🎯',
+}
+
+// Candidate base forms for a word, so plural / -ing / -ed variants match the
+// dictionary. Over-stemmed forms (e.g. "runn") simply won't be found, so they
+// can't cause a wrong match — irregular gerunds like "running" are listed above.
+function wordVariants(w) {
+  const v = [w]
+  if (w.length > 4 && w.endsWith('ies')) v.push(w.slice(0, -3) + 'y')
+  if (w.length > 3 && w.endsWith('es'))  v.push(w.slice(0, -2))
+  if (w.length > 3 && w.endsWith('s'))   v.push(w.slice(0, -1))
+  if (w.length > 4 && w.endsWith('ing')) v.push(w.slice(0, -3), w.slice(0, -3) + 'e')
+  if (w.length > 4 && w.endsWith('ed'))  v.push(w.slice(0, -2), w.slice(0, -1))
+  return v
+}
 
 export function getAutoEmoji(title) {
   const lower = title.toLowerCase()
-  for (const rule of EMOJI_RULES) {
-    if (rule.keys.some(k => lower.includes(k))) return rule.emoji
+
+  // 1. Multi-word idioms (matched on word boundaries to avoid e.g. "understand")
+  const padded = ` ${lower} `
+  for (const [phrases, emoji] of EMOJI_PHRASES) {
+    if (phrases.some(p => padded.includes(` ${p} `))) return emoji
   }
-  // Fallback: check if the title starts with a specific common verb
-  if (/^(plan\b)/.test(lower)) return '🗺️'
-  return '✨'
+
+  // 2. Keyword dictionary — rightmost matching word wins (task titles read
+  //    "verb + object", and the object is usually the more meaningful icon).
+  const words = lower.match(/[a-z]+/g) || []
+  let match = null
+  for (const w of words) {
+    for (const cand of wordVariants(w)) {
+      if (EMOJI_WORDS[cand]) { match = EMOJI_WORDS[cand]; break }
+    }
+  }
+  return match || '✨'
 }
 
 const PALETTES = [
