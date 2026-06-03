@@ -192,6 +192,46 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
         </div>
       </div>
 
+      {/* Smart emoji */}
+      <div className="settings-section-label">Smart emoji</div>
+      <div className="settings-section">
+        <div className="setting-row">
+          <span className="setting-row-icon">🪄</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">AI emoji matching</div>
+            <div className="setting-row-desc">Let Gemini read each task and pick the best emoji</div>
+          </div>
+          <Toggle
+            checked={!!settings.aiEmoji}
+            onChange={v => updateSetting('aiEmoji', v)}
+          />
+        </div>
+
+        {settings.aiEmoji && (
+          <div className="setting-row setting-row-stack">
+            <div className="setting-row-info">
+              <div className="setting-row-label">Gemini API key</div>
+              <div className="setting-row-desc">
+                Kept only on this device. Get a free key at{' '}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+                  aistudio.google.com/apikey
+                </a>
+              </div>
+            </div>
+            <input
+              className="setting-key-input"
+              type="password"
+              placeholder="Paste your Gemini API key"
+              value={settings.geminiApiKey ?? ''}
+              onChange={e => updateSetting('geminiApiKey', e.target.value.trim())}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Visuals */}
       <div className="settings-section-label">Visuals</div>
       <div className="settings-section">

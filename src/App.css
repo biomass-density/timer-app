@@ -779,6 +779,23 @@ input, textarea { font: inherit; }
   flex-shrink: 0;
 }
 .setting-select:focus { border-color: var(--accent); }
+.setting-row-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.setting-row-desc a { color: var(--accent); }
+.setting-key-input {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+.setting-key-input:focus { border-color: var(--accent); }
 .toggle {
   position: relative;
   width: 44px;
