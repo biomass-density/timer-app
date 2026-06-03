@@ -3,7 +3,8 @@
 // the caller (from process.env on Node, or context.env on Cloudflare); this
 // module never reads the environment itself, so it has no Node dependencies.
 
-const DEFAULT_MODEL = 'gemini-2.0-flash'
+// "-latest" alias so a retired model never silently breaks this again.
+const DEFAULT_MODEL = 'gemini-flash-lite-latest'
 
 const SYSTEM = [
   'You pick a single emoji for a to-do task title.',
