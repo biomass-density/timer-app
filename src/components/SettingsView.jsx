@@ -223,7 +223,7 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
               <div className="setting-row-desc">
                 {aiReady === null && 'Checking…'}
                 {aiReady === true && 'Connected — Gemini key found on the server'}
-                {aiReady === false && 'No key on the server. Add GEMINI_API_KEY to .env and restart; tasks use offline matching until then.'}
+                {aiReady === false && 'No Gemini key found on the server. Tasks use offline matching until one is set.'}
               </div>
             </div>
           </div>

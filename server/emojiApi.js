@@ -1,4 +1,8 @@
-import { suggestEmoji, hasKey } from './gemini.js'
+import { suggestEmoji } from './gemini.js'
+
+// On Node, the key comes from the environment (loaded from .env in dev/prod).
+const getKey = () => process.env.GEMINI_API_KEY
+const getModel = () => process.env.GEMINI_MODEL
 
 function sendJson(res, status, obj) {
   res.statusCode = status
@@ -22,7 +26,7 @@ export async function handleApi(req, res) {
 
   // Lets the client know whether the server has a Gemini key configured.
   if (urlPath === '/api/config' && req.method === 'GET') {
-    sendJson(res, 200, { aiAvailable: hasKey() })
+    sendJson(res, 200, { aiAvailable: !!getKey() })
     return true
   }
 
@@ -31,7 +35,7 @@ export async function handleApi(req, res) {
   if (urlPath === '/api/emoji' && req.method === 'POST') {
     try {
       const { title } = JSON.parse((await readBody(req)) || '{}')
-      const emoji = await suggestEmoji(title)
+      const emoji = await suggestEmoji(title, getKey(), getModel())
       sendJson(res, 200, { emoji: emoji || null })
     } catch {
       sendJson(res, 200, { emoji: null })

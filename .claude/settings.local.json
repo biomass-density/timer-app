@@ -18,7 +18,12 @@
       "Bash(curl -s http://localhost:56226/api/config)",
       "Bash(curl -s -X POST http://localhost:56226/api/emoji -H 'Content-Type: application/json' -d '{\"title\":\"dentist appointment\"}')",
       "Bash(curl -s http://localhost:56226/)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:56226/api/emoji)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:56226/api/emoji)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(curl -s http://localhost:56553/api/config)",
+      "Bash(curl -s -X POST http://localhost:56553/api/emoji -H 'Content-Type: application/json' -d '{\"title\":\"walk the dog\"}')",
+      "Bash(curl -s http://localhost:56553/)"
     ]
   }
 }
