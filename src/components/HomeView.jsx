@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { TASK_COLORS, EMOJI_THEMES, COLOR_THEMES } from '../utils/taskUtils'
 import { formatMMSS } from '../utils/timeUtils'
+import { haptic } from '../utils/haptic'
 import TaskItem from './TaskItem'
 
 // ── Schedule helpers ──────────────────────────────────────────────────────────
@@ -99,6 +100,12 @@ function ClockFace({ fractionOfHour, fillColor, isOvertime, dayProgress }) {
   )
 }
 
+function PlayPauseIcon({ running, size = 30 }) {
+  return running
+    ? <svg width={size} height={size} viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+    : <svg width={size} height={size} viewBox="0 0 24 24" fill="white"><polygon points="7,3 21,12 7,21"/></svg>
+}
+
 export default function HomeView({
   tasks, incompleteTasks, completedTasks,
   timerState, elapsed, activeTask,
@@ -111,8 +118,35 @@ export default function HomeView({
   const [dragOverId, setDragOverId] = useState(null)
   const [showEmojiSheet, setShowEmojiSheet] = useState(false)
   const [showColorSheet, setShowColorSheet] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const draggedId = useRef(null)
   const touchDragRef = useRef(null)
+
+  // ── Fullscreen focus mode ─────────────────────────────────────────────────
+  function enterFullscreen() {
+    haptic(10)
+    setFullscreen(true)
+    // Real browser fullscreen where supported (desktop/Android); no-op on iOS.
+    document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+  function exitFullscreen() {
+    haptic(10)
+    setFullscreen(false)
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+  }
+  // Close the overlay if the browser leaves fullscreen (e.g. Esc on desktop).
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement) setFullscreen(false) }
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [])
+  // Auto-exit when the active task goes away (e.g. last task completed).
+  useEffect(() => {
+    if (fullscreen && !activeTask) {
+      setFullscreen(false)
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+    }
+  }, [fullscreen, activeTask])
 
   const plannedSec = activeTask ? activeTask.durationMinutes * 60 : 0
   const remainSec  = activeTask ? plannedSec - elapsed : 0
@@ -166,6 +200,13 @@ export default function HomeView({
 
       {/* ── Pie header ────────────────────────────────────────────── */}
       <div className="pie-section">
+        {activeTask && (
+          <button className="pie-fullscreen-btn" onClick={enterFullscreen} aria-label="Fullscreen timer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+          </button>
+        )}
         <div className="pie-wrap">
           <ClockFace
             fractionOfHour={fractionOfHour}
@@ -178,10 +219,7 @@ export default function HomeView({
             onClick={toggleTimer}
             aria-label={timerState.isRunning ? 'Pause' : 'Play'}
           >
-            {timerState.isRunning
-              ? <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-              : <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><polygon points="7,3 21,12 7,21"/></svg>
-            }
+            <PlayPauseIcon running={timerState.isRunning} size={26} />
           </button>
         </div>
 
@@ -323,6 +361,51 @@ export default function HomeView({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Fullscreen focus mode ─────────────────────────────────── */}
+      {fullscreen && activeTask && (
+        <div className="focus-overlay">
+          <button className="focus-exit" onClick={exitFullscreen} aria-label="Exit fullscreen">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+            </svg>
+          </button>
+
+          <div className="focus-task">
+            <span className="focus-task-emoji">{activeTask.emoji}</span>
+            <span className="focus-task-title">{activeTask.title}</span>
+          </div>
+
+          <div className="focus-dial">
+            <ClockFace
+              fractionOfHour={fractionOfHour}
+              fillColor={color.bg}
+              isOvertime={isOvertime}
+              dayProgress={dayProgress}
+            />
+            <button
+              className="focus-center-btn"
+              onClick={toggleTimer}
+              aria-label={timerState.isRunning ? 'Pause' : 'Play'}
+              style={{ background: color.bg }}
+            >
+              <PlayPauseIcon running={timerState.isRunning} size={40} />
+            </button>
+          </div>
+
+          <div className="focus-time-row">
+            <button className="pie-adj-btn" onClick={() => adjustTime(5 * 60)}>−5</button>
+            <span className={`focus-time${isOvertime ? ' overtime' : ''}`}>
+              {(isOvertime ? '+' : '') + formatMMSS(Math.abs(remainSec))}
+            </span>
+            <button className="pie-adj-btn" onClick={() => adjustTime(-5 * 60)}>+5</button>
+          </div>
+
+          <button className="focus-complete" onClick={() => completeTask(activeTask.id)}>
+            ✓ Complete
+          </button>
         </div>
       )}
     </div>
