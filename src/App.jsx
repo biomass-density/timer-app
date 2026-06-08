@@ -3,7 +3,7 @@ import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
 import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme, getAutoEmoji } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
-import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape, unlockAudio } from './utils/audioUtils'
+import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape, unlockAudio, playTick } from './utils/audioUtils'
 import { launchConfetti } from './utils/confetti'
 import { haptic } from './utils/haptic'
 import { suggestEmojiAI } from './utils/aiEmoji'
@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   confettiEnabled: true,
   completionSound: 'tada',
   defaultMinutes: 25,
+  tickingSound: false,
   aiEmoji: true, // contextual emoji via the backend; harmlessly off if the server has no key
 }
 
@@ -53,6 +54,7 @@ export default function App() {
 
   const intervalRef     = useRef(null)
   const chimeCountRef   = useRef(0)
+  const tickRef         = useRef(null)
   const nagRef          = useRef(null)
   const sessionStartRef = useRef(null)
   const notifGranted    = useRef(false)
@@ -128,6 +130,18 @@ export default function App() {
       playChime()
     }
   }, [elapsed, activeTask, timerState.isRunning, settings.chimeInterval])
+
+  // ── Ticking sound ────────────────────────────────────────────────────────
+  // A steady once-a-second tick while the timer runs, so it's obvious it's on.
+  useEffect(() => {
+    clearInterval(tickRef.current)
+    tickRef.current = null
+    if (timerState.isRunning && settings.tickingSound) {
+      playTick() // immediate tick for instant feedback
+      tickRef.current = setInterval(playTick, 1000)
+    }
+    return () => clearInterval(tickRef.current)
+  }, [timerState.isRunning, settings.tickingSound])
 
   // ── Overtime alarm ───────────────────────────────────────────────────────
   useEffect(() => {

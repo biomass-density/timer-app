@@ -138,6 +138,18 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
         </div>
 
         <div className="setting-row">
+          <span className="setting-row-icon">🕰️</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">Ticking sound</div>
+            <div className="setting-row-desc">Soft tick every second while a timer is running</div>
+          </div>
+          <Toggle
+            checked={!!settings.tickingSound}
+            onChange={v => updateSetting('tickingSound', v)}
+          />
+        </div>
+
+        <div className="setting-row">
           <span className="setting-row-icon">🎧</span>
           <div className="setting-row-info">
             <div className="setting-row-label">Soundscape</div>

@@ -61,6 +61,24 @@ export function playAlarmBell() {
   } catch {}
 }
 
+// Soft clock tick — alternates tick/tock pitch like a real clock.
+let tickParity = 0
+export function playTick() {
+  try {
+    const ac = getCtx()
+    const now = ac.currentTime
+    const osc = ac.createOscillator()
+    const gain = ac.createGain()
+    osc.type = 'square'
+    osc.frequency.value = (tickParity++ % 2 === 0) ? 1100 : 850 // tick / tock
+    osc.connect(gain); gain.connect(ac.destination)
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(0.1, now + 0.001)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03)
+    osc.start(now); osc.stop(now + 0.04)
+  } catch {}
+}
+
 // ── Soundscape state ──────────────────────────────────────────────────────────
 // audioEl  → HTML5 Audio for real recordings (rain, café, beach, forest)
 // soundNodes + soundGain → Web Audio for synthesised noise (brown, white)
