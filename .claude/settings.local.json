@@ -27,7 +27,9 @@
       "Bash(git push *)",
       "Bash(curl -s -m 15 https://timer-app-agk.pages.dev/api/config)",
       "Bash(curl -s -m 15 -o /dev/null -w \"%{http_code}\\\\n\" https://timer-app-agk.pages.dev/api/config)",
-      "Bash(curl -s -m 10 https://timer-app-agk.pages.dev/)"
+      "Bash(curl -s -m 10 https://timer-app-agk.pages.dev/)",
+      "Bash(grep -oE \"ft_[a-z_]+|ft_tasks_|\\\\`ft_tasks_\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/firebase/package.json'\\).version\\)\")"
     ]
   }
 }

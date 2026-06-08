@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
+import { useCloudSync } from './hooks/useCloudSync'
+import { watchAuth } from './lib/firebase'
 import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme, getAutoEmoji } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
 import { playChime, playAlarmBell, startSoundscape, stopSoundscape, playCompletionSound, resumeSoundscape, unlockAudio, playTick } from './utils/audioUtils'
@@ -46,6 +48,12 @@ export default function App() {
   const [sessions, setSessions] = useLocalStorage('ft_sessions', [])
   const [activeTab, setActiveTab] = useState('home')
   const [elapsed, setElapsed] = useState(0)
+
+  // ── Auth + cloud sync ──────────────────────────────────────────────────────
+  const [user, setUser] = useState(null)
+  useEffect(() => watchAuth(setUser), [])
+  useCloudSync(user) // syncs tasks/timer/presets/settings across devices while signed in
+
   const [flashOvertime, setFlashOvertime] = useState(false)
 
   // Quick-add lives at App level so FAB is always accessible
@@ -499,7 +507,7 @@ export default function App() {
   const shared = {
     tasks, incompleteTasks, completedTasks,
     timerState, elapsed, activeTask,
-    settings, setSettings,
+    settings, setSettings, user,
     presets, savePreset, loadPreset, deletePreset,
     sessions,
     addTask, selectTask, startTask, pauseTimer, resumeTimer, toggleTimer, adjustTime,

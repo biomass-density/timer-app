@@ -1,5 +1,17 @@
 import { useState } from 'react'
 import { startSoundscape, stopSoundscape, setSoundscapeVolume } from '../utils/audioUtils'
+import { signInWithGoogle, signOut } from '../lib/firebase'
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+      <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/>
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+    </svg>
+  )
+}
 
 const SOUNDSCAPES = [
   { value: '',       label: 'None' },
@@ -56,8 +68,18 @@ function Toggle({ checked, onChange }) {
   )
 }
 
-export default function SettingsView({ settings, setSettings, presets, savePreset, loadPreset, deletePreset, tasks }) {
+export default function SettingsView({ settings, setSettings, presets, savePreset, loadPreset, deletePreset, tasks, user }) {
   const [presetName, setPresetName] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
+
+  function handleSignIn() {
+    setAuthError('')
+    setSigningIn(true)
+    signInWithGoogle()
+      .catch(e => setAuthError(e?.message || 'Sign-in failed'))
+      .finally(() => setSigningIn(false))
+  }
 
   function updateSetting(key, value) {
     setSettings(prev => ({ ...prev, [key]: value }))
@@ -82,6 +104,35 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
   return (
     <div className="settings-view">
       <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Settings</h2>
+
+      {/* Account / sync */}
+      <div className="settings-section-label">Account</div>
+      <div className="settings-section">
+        {user ? (
+          <div className="setting-row">
+            {user.photoURL
+              ? <img className="account-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+              : <span className="setting-row-icon">👤</span>}
+            <div className="setting-row-info">
+              <div className="setting-row-label">{user.displayName || 'Signed in'}</div>
+              <div className="setting-row-desc">{user.email} · syncing across your devices</div>
+            </div>
+            <button className="account-btn" onClick={() => signOut()}>Sign out</button>
+          </div>
+        ) : (
+          <div className="setting-row setting-row-stack">
+            <div className="setting-row-info">
+              <div className="setting-row-label">Sync across devices</div>
+              <div className="setting-row-desc">Sign in to sync your tasks, timer and settings between phone and desktop. The app works fine without it too.</div>
+            </div>
+            <button className="google-signin-btn" onClick={handleSignIn} disabled={signingIn}>
+              <GoogleIcon />
+              {signingIn ? 'Signing in…' : 'Sign in with Google'}
+            </button>
+            {authError && <div className="setting-row-desc" style={{ color: 'var(--overtime)' }}>{authError}</div>}
+          </div>
+        )}
+      </div>
 
       {/* Sound & chimes */}
       <div className="settings-section-label">Sound</div>

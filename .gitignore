@@ -3,8 +3,8 @@
 .env.local
 .env.*.local
 
-# Vite's transient dependency cache (regenerated on every build)
-node_modules/.vite/
+# Dependencies — installed by `npm install` (and by Cloudflare at build time)
+node_modules/
 
 # Logs
 *.log
