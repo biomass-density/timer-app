@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   completionSound: 'tada',
   defaultMinutes: 25,
   tickingSound: false,
+  keepAwake: true, // hold a screen wake lock so the display never sleeps while the app is open
   aiEmoji: true, // contextual emoji via the backend; harmlessly off if the server has no key
 }
 
@@ -37,10 +38,10 @@ export default function App() {
 
   const [tasks, setTasks] = useLocalStorage(`ft_tasks_${today}`, [])
   const [timerState, setTimerState] = useLocalStorage('ft_timer', EMPTY_TIMER)
-  useWakeLock(true) // keep the screen awake the whole time the app is open
   const [_rawSettings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
   // Always merge stored settings with defaults so new keys (e.g. completionSound) are never undefined
   const settings = { ...DEFAULT_SETTINGS, ..._rawSettings }
+  useWakeLock(settings.keepAwake) // keep the display on while the app is open (toggle in Settings)
   const [presets, setPresets] = useLocalStorage('ft_presets', [])
   const [sessions, setSessions] = useLocalStorage('ft_sessions', [])
   const [activeTab, setActiveTab] = useState('home')

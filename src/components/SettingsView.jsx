@@ -204,6 +204,22 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
         </div>
       </div>
 
+      {/* Screen */}
+      <div className="settings-section-label">Screen</div>
+      <div className="settings-section">
+        <div className="setting-row">
+          <span className="setting-row-icon">📱</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">Keep screen awake</div>
+            <div className="setting-row-desc">Stop the display dimming or sleeping while the app is open</div>
+          </div>
+          <Toggle
+            checked={!!settings.keepAwake}
+            onChange={v => updateSetting('keepAwake', v)}
+          />
+        </div>
+      </div>
+
       {/* Smart emoji */}
       <div className="settings-section-label">Smart emoji</div>
       <div className="settings-section">
