@@ -41,7 +41,7 @@ export default function App() {
   const [_rawSettings, setSettings] = useLocalStorage('ft_settings', DEFAULT_SETTINGS)
   // Always merge stored settings with defaults so new keys (e.g. completionSound) are never undefined
   const settings = { ...DEFAULT_SETTINGS, ..._rawSettings }
-  useWakeLock(settings.keepAwake) // keep the display on while the app is open (toggle in Settings)
+  useWakeLock(settings.keepAwake && timerState.isRunning) // keep the display on only while a timer runs
   const [presets, setPresets] = useLocalStorage('ft_presets', [])
   const [sessions, setSessions] = useLocalStorage('ft_sessions', [])
   const [activeTab, setActiveTab] = useState('home')

@@ -211,7 +211,7 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
           <span className="setting-row-icon">📱</span>
           <div className="setting-row-info">
             <div className="setting-row-label">Keep screen awake</div>
-            <div className="setting-row-desc">Stop the display dimming or sleeping while the app is open</div>
+            <div className="setting-row-desc">Stop the display dimming or sleeping while a timer is running</div>
           </div>
           <Toggle
             checked={!!settings.keepAwake}
