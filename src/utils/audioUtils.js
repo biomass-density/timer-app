@@ -61,8 +61,7 @@ export function playAlarmBell() {
   } catch {}
 }
 
-// Soft clock tick — alternates tick/tock pitch like a real clock.
-let tickParity = 0
+// Soft clock tick — a single low, consistent tone each second.
 export function playTick() {
   try {
     const ac = getCtx()
@@ -70,7 +69,7 @@ export function playTick() {
     const osc = ac.createOscillator()
     const gain = ac.createGain()
     osc.type = 'square'
-    osc.frequency.value = (tickParity++ % 2 === 0) ? 1100 : 850 // tick / tock
+    osc.frequency.value = 850 // single low tick (no alternating tock)
     osc.connect(gain); gain.connect(ac.destination)
     gain.gain.setValueAtTime(0.0001, now)
     gain.gain.exponentialRampToValueAtTime(0.1, now + 0.001)
