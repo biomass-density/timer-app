@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useCloudSync } from './hooks/useCloudSync'
+import { useTimerNotifications } from './hooks/useTimerNotifications'
 import { watchAuth } from './lib/firebase'
 import { generateId, getTodayDate, parseTaskInput, getNextColor, formatToday, applyEmojiTheme, applyColorTheme, getAutoEmoji } from './utils/taskUtils'
 import { projectedEndTime, formatMinutesLabel } from './utils/timeUtils'
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS = {
   tickingSound: false,
   keepAwake: true, // hold a screen wake lock so the display never sleeps while the app is open
   aiEmoji: true, // contextual emoji via the backend; harmlessly off if the server has no key
+  timerNotifications: false,
 }
 
 const EMPTY_TIMER = {
@@ -53,6 +55,21 @@ export default function App() {
   const [user, setUser] = useState(null)
   useEffect(() => watchAuth(setUser), [])
   useCloudSync(user) // syncs tasks/timer/presets/settings across devices while signed in
+
+  // Register service worker for push notifications (no-op if already registered)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
+  useTimerNotifications({
+    user,
+    enabled: settings.timerNotifications,
+    setEnabled: v => setSettings(prev => ({ ...prev, timerNotifications: v })),
+    timerState,
+    activeTask: tasks.find(t => t.id === timerState.activeTaskId) ?? null,
+  })
 
   const [flashOvertime, setFlashOvertime] = useState(false)
 

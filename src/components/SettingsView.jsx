@@ -255,6 +255,25 @@ export default function SettingsView({ settings, setSettings, presets, savePrese
         </div>
       </div>
 
+      {/* Notifications */}
+      <div className="settings-section-label">Notifications</div>
+      <div className="settings-section">
+        <div className="setting-row">
+          <span className="setting-row-icon">🔔</span>
+          <div className="setting-row-info">
+            <div className="setting-row-label">Every-5-min timer alerts</div>
+            <div className="setting-row-desc">
+              {user
+                ? 'Sends a notification every 5 minutes while a task is running — mirrors to Apple Watch automatically'
+                : 'Sign in required — the server needs your account to read your timer'}
+            </div>
+          </div>
+          {user
+            ? <Toggle checked={!!settings.timerNotifications} onChange={v => updateSetting('timerNotifications', v)} />
+            : <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Sign in ↑</span>}
+        </div>
+      </div>
+
       {/* Screen */}
       <div className="settings-section-label">Screen</div>
       <div className="settings-section">

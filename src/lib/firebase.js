@@ -3,7 +3,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup,
   signOut as fbSignOut, onAuthStateChanged,
 } from 'firebase/auth'
-import { getFirestore, doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore'
 
 // Public Firebase config — safe to ship in the client. Access is controlled
 // by Firestore security rules (each user can only touch users/{their uid}),
@@ -43,4 +43,20 @@ export function watchUserDoc(uid, cb) {
 // Overwrite the whole user document (last-write-wins).
 export function pushUserDoc(uid, data) {
   return setDoc(doc(db, 'users', uid), data)
+}
+
+// ── Push notification docs ────────────────────────────────────────────────────
+// Each signed-in device with notifications enabled has a doc in
+// activeNotifications/{uid} that the notify worker reads every 5 minutes.
+
+export function saveNotifyDoc(uid, pushSubscription) {
+  return setDoc(doc(db, 'activeNotifications', uid), { uid, pushSubscription }, { merge: true })
+}
+
+export function updateNotifyTimer(uid, timerData) {
+  return setDoc(doc(db, 'activeNotifications', uid), { uid, ...timerData }, { merge: true })
+}
+
+export function deleteNotifyDoc(uid) {
+  return deleteDoc(doc(db, 'activeNotifications', uid))
 }
