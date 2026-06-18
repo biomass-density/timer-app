@@ -1597,27 +1597,25 @@ input, textarea { font: inherit; }
   padding: 6px 10px;
   min-width: 0;
 }
-.task-edit-mins {
-  width: 52px;
-  border: none;
-  outline: none;
-  font-size: 15px;
-  font-weight: 600;
+.task-edit-adj {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
   background: var(--task-btn-bg, rgba(255,255,255,0.25));
   color: var(--task-text, var(--text));
-  border-radius: 8px;
-  padding: 6px 8px;
-  text-align: center;
-  -moz-appearance: textfield;
-  flex-shrink: 0;
+  transition: transform 0.1s;
 }
-.task-edit-mins::-webkit-inner-spin-button,
-.task-edit-mins::-webkit-outer-spin-button { -webkit-appearance: none; }
-.task-edit-mins-label {
-  font-size: 11px;
-  color: var(--task-text2, var(--text-3));
+.task-edit-adj:active { transform: scale(0.88); }
+.task-edit-mins-display {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--task-text, var(--text));
   flex-shrink: 0;
-  margin-left: -4px;
+  min-width: 36px;
+  text-align: center;
 }
 .task-edit-save,
 .task-edit-cancel {

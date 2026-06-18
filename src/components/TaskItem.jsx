@@ -46,19 +46,30 @@ export default function TaskItem({
     else onSelect(task.id)
   }
 
-  // ── Long press on title → edit mode ──────────────────────────────────────
+  // ── Open edit mode ────────────────────────────────────────────────────────
+  function openEdit() {
+    haptic(20)
+    setEditTitle(task.title)
+    setEditMins(String(task.durationMinutes))
+    setEditing(true)
+    setTimeout(() => editTitleRef.current?.focus(), 50)
+  }
+
+  // Long-press anywhere on the main row (mobile)
   function onTitleTouchStart(e) {
     if (task.completed || editing) return
-    longPressTimer.current = setTimeout(() => {
-      haptic(20)
-      setEditTitle(task.title)
-      setEditMins(String(task.durationMinutes))
-      setEditing(true)
-      setTimeout(() => editTitleRef.current?.focus(), 50)
-    }, 600)
+    longPressTimer.current = setTimeout(openEdit, 600)
   }
   function onTitleTouchEnd()  { clearTimeout(longPressTimer.current) }
   function onTitleTouchMove() { clearTimeout(longPressTimer.current) }
+
+  // Click on title text (desktop + mobile single-tap)
+  function onTitleClick(e) {
+    if (task.completed || editing) return
+    e.stopPropagation()
+    clearTimeout(longPressTimer.current)
+    openEdit()
+  }
 
   // ── Inline edit save / cancel ─────────────────────────────────────────────
   function handleSaveEdit(e) {
@@ -141,14 +152,17 @@ export default function TaskItem({
             placeholder="Task name"
             autoComplete="off"
           />
-          <input
-            className="task-edit-mins"
-            type="number"
-            min="1" max="480"
-            value={editMins}
-            onChange={e => setEditMins(e.target.value)}
-          />
-          <span className="task-edit-mins-label">m</span>
+          <button
+            type="button"
+            className="task-edit-adj"
+            onClick={() => setEditMins(m => String(Math.max(1, (parseInt(m, 10) || 0) - 5)))}
+          >−5</button>
+          <span className="task-edit-mins-display">{editMins}m</span>
+          <button
+            type="button"
+            className="task-edit-adj"
+            onClick={() => setEditMins(m => String(Math.min(480, (parseInt(m, 10) || 0) + 5)))}
+          >+5</button>
           <button type="submit" className="task-edit-save" aria-label="Save">✓</button>
           <button type="button" className="task-edit-cancel" onClick={handleCancelEdit} aria-label="Cancel">✕</button>
         </form>
@@ -169,7 +183,11 @@ export default function TaskItem({
           </div>
 
           <div className="task-title-wrap">
-            <div className={`task-title${task.completed ? ' done-title' : ''}`}>
+            <div
+              className={`task-title${task.completed ? ' done-title' : ''}`}
+              onClick={onTitleClick}
+              style={{ cursor: task.completed ? 'default' : 'text' }}
+            >
               {task.title}
             </div>
           </div>

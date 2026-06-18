@@ -22,9 +22,9 @@ export function parseTaskInput(raw, defaultMinutes = 25) {
 export const TASK_COLORS = {
   red:    { bg: '#FF6B6B', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFF0F0', chip: '#FFD6D6', label: 'Red' },
   orange: { bg: '#FF9F43', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFF5E8', chip: '#FFE0BB', label: 'Orange' },
-  yellow: { bg: '#F5CB5C', text: '#2A1D00',  text2: 'rgba(42,29,0,0.58)',   btnBg: 'rgba(0,0,0,0.10)',       light: '#FFFBE8', chip: '#FCEDB0', label: 'Yellow' },
-  green:  { bg: '#51CF66', text: '#0d2a14',  text2: 'rgba(13,42,20,0.62)',  btnBg: 'rgba(0,0,0,0.10)',       light: '#EDFAF0', chip: '#B8F0C1', label: 'Green' },
-  teal:   { bg: '#20C997', text: '#082820',  text2: 'rgba(8,40,32,0.62)',   btnBg: 'rgba(0,0,0,0.10)',       light: '#E5FAF4', chip: '#9FEEDB', label: 'Teal' },
+  yellow: { bg: '#F5CB5C', text: '#fff',     text2: 'rgba(255,255,255,0.75)', btnBg: 'rgba(255,255,255,0.28)', light: '#FFFBE8', chip: '#FCEDB0', label: 'Yellow' },
+  green:  { bg: '#51CF66', text: '#fff',     text2: 'rgba(255,255,255,0.75)', btnBg: 'rgba(255,255,255,0.28)', light: '#EDFAF0', chip: '#B8F0C1', label: 'Green' },
+  teal:   { bg: '#20C997', text: '#fff',     text2: 'rgba(255,255,255,0.75)', btnBg: 'rgba(255,255,255,0.28)', light: '#E5FAF4', chip: '#9FEEDB', label: 'Teal' },
   blue:   { bg: '#4DA6FF', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#E5F2FF', chip: '#B3D6FF', label: 'Blue' },
   purple: { bg: '#9B6FD4', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#F0E8FF', chip: '#D4BAFF', label: 'Purple' },
   pink:   { bg: '#F06595', text: '#fff',     text2: 'rgba(255,255,255,0.7)', btnBg: 'rgba(255,255,255,0.22)', light: '#FFE5EF', chip: '#FFB8D0', label: 'Pink' },
